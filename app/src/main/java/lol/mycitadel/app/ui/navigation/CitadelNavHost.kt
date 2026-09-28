@@ -17,6 +17,8 @@ import lol.mycitadel.app.ui.screens.AboutScreen
 import lol.mycitadel.app.ui.screens.HomeScreen
 import lol.mycitadel.app.ui.screens.PlaceholderScreen
 import lol.mycitadel.app.ui.screens.SecurityScreen
+import lol.mycitadel.app.ui.screens.ContactScreen
+import lol.mycitadel.app.ui.screens.TermsScreen
 
 @Composable
 fun CitadelNavHost(
@@ -69,20 +71,13 @@ fun CitadelNavHost(
                 AboutScreen()
             }
             composable(Routes.CONTACT) {
-                PlaceholderScreen(
-                    title = "Contact",
-                    subtitle = "The contact form is coming soon. " +
-                            "For now, reach out at info@mycitadel.lol.",
-                )
+                ContactScreen()
             }
             composable(Routes.SECURITY) {
                 SecurityScreen()
             }
             composable(Routes.TERMS) {
-                PlaceholderScreen(
-                    title = "Terms of Service",
-                    subtitle = "The full terms are coming soon.",
-                )
+                TermsScreen()
             }
         }
     }
