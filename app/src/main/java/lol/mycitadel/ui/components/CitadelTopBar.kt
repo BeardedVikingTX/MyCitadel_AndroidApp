@@ -16,23 +16,31 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import lol.mycitadel.app.data.network.UserDto
 import lol.mycitadel.app.ui.theme.Cyan
 import lol.mycitadel.app.ui.theme.CyanBright
 import lol.mycitadel.app.ui.theme.Gold
 import lol.mycitadel.app.ui.theme.Void
 
 /**
- * The top bar shown on every screen. Mirrors the web nav.php brand block:
- *   [rune mark] MyCitadel        [Log In] [Register]
+ * The top bar shown on every screen.
  *
- * Future: when auth is live, the Log In / Register buttons swap out for
- * a notification bell + avatar dropdown.
+ * Two states:
+ *   • Guest  — Log In + Register buttons
+ *   • Authed — User's username as a Dashboard button
+ *
+ * The `onLogoutComplete` callback is accepted now so the call site
+ * doesn't need changing when the Login screen ships. It's not yet
+ * wired to a real logout flow (that lands with the Login screen).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CitadelTopBar(
+    currentUser: UserDto?,
     onLoginClick: () -> Unit,
     onRegisterClick: () -> Unit,
+    onDashboardClick: () -> Unit,
+    onLogoutComplete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     TopAppBar(
@@ -54,27 +62,40 @@ fun CitadelTopBar(
             }
         },
         actions = {
-            TextButton(onClick = onLoginClick) {
-                Text(
-                    text = "LOG IN",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Cyan,
-                    letterSpacing = 1.sp,
-                )
-            }
-            Button(
-                onClick = onRegisterClick,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Gold.copy(alpha = 0.12f),
-                    contentColor = Gold,
-                ),
-                modifier = Modifier.width(110.dp),
-            ) {
-                Text(
-                    text = "REGISTER",
-                    style = MaterialTheme.typography.labelMedium,
-                    letterSpacing = 1.sp,
-                )
+            if (currentUser == null) {
+                // ── Guest state ────────────────────────────────────
+                TextButton(onClick = onLoginClick) {
+                    Text(
+                        text = "LOG IN",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Cyan,
+                        letterSpacing = 1.sp,
+                    )
+                }
+                Button(
+                    onClick = onRegisterClick,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Gold.copy(alpha = 0.12f),
+                        contentColor = Gold,
+                    ),
+                    modifier = Modifier.width(110.dp),
+                ) {
+                    Text(
+                        text = "REGISTER",
+                        style = MaterialTheme.typography.labelMedium,
+                        letterSpacing = 1.sp,
+                    )
+                }
+            } else {
+                // ── Authenticated state ────────────────────────────
+                TextButton(onClick = onDashboardClick) {
+                    Text(
+                        text = currentUser.username.uppercase(),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Cyan,
+                        letterSpacing = 1.sp,
+                    )
+                }
             }
             Spacer(Modifier.width(8.dp))
         },

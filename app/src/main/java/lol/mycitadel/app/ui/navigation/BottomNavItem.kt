@@ -7,7 +7,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.material.icons.filled.Description
+
 /**
  * A single item in the bottom navigation bar.
  */
@@ -31,7 +31,7 @@ val GuestNavItems: List<BottomNavItem> = listOf(
 
 /**
  * The bottom bar items shown to authenticated users.
- * Not wired up yet — reserved for when auth ships.
+ * Wired up when auth ships.
  */
 val AuthedNavItems: List<BottomNavItem> = listOf(
     BottomNavItem(Routes.FEED,      "Feed",      Icons.Filled.Home),
