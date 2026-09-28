@@ -27,6 +27,7 @@ import lol.mycitadel.app.ui.screens.TermsScreen
 import lol.mycitadel.app.ui.screens.DashboardScreen
 import lol.mycitadel.app.ui.screens.LoginScreen
 import lol.mycitadel.app.ui.screens.ProfileEditScreen
+import lol.mycitadel.app.ui.screens.FeedScreen
 
 @Composable
 fun CitadelNavHost(
@@ -145,6 +146,10 @@ fun CitadelNavHost(
                         }
                     },
                 )
+            }
+
+            composable(Routes.FEED) {
+                FeedScreen(currentUser = currentUser)
             }
         }
     }

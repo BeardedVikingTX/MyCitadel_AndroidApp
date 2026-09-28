@@ -75,7 +75,8 @@ class LoginViewModel(private val repo: AuthRepository) : ViewModel() {
         viewModelScope.launch {
             when (val result = repo.login(s.identifier, s.password)) {
                 is AuthRepository.LoginResult.Success -> {
-                    _state.update { it.copy(submitting = false, successUser = result.user) }
+                    val full = repo.fetchMe() ?: result.user
+                    _state.update { it.copy(submitting = false, successUser = full) }
                 }
                 is AuthRepository.LoginResult.TwoFactorRequired -> {
                     _state.update {

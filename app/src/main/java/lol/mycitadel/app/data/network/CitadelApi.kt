@@ -8,7 +8,7 @@ import kotlinx.serialization.json.JsonObject
 import okhttp3.MultipartBody
 import retrofit2.http.Multipart
 import retrofit2.http.Part
-
+import retrofit2.http.Query
 
 interface CitadelApi {
 
@@ -58,4 +58,26 @@ interface CitadelApi {
     @Multipart
     @POST("upload/wallpaper.php")
     suspend fun uploadWallpaper(@Part file: MultipartBody.Part): Response<UploadResponse>
+
+    /* ── Feed & Posts ──────────────────────────────────────────── */
+
+    @GET("feed.php")
+    suspend fun feed(
+        @Query("scope") scope: String = "all",
+        @Query("limit") limit: Int = 20,
+        @Query("cursor") cursor: String? = null,
+    ): Response<FeedResponse>
+
+    @POST("posts/create.php")
+    suspend fun createPost(@Body body: CreatePostRequest): Response<CreatePostResponse>
+
+    @POST("posts/update.php")
+    suspend fun updatePost(@Body body: UpdatePostRequest): Response<UpdatePostResponse>
+
+    @POST("posts/delete.php")
+    suspend fun deletePost(@Body body: DeletePostRequest): Response<DeletePostResponse>
+
+    @Multipart
+    @POST("upload/media.php")
+    suspend fun uploadMedia(@Part file: MultipartBody.Part): Response<UploadMediaResponse>
 }

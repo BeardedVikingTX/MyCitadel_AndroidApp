@@ -90,8 +90,9 @@ class AuthViewModel(private val repo: AuthRepository) : ViewModel() {
 
             when (result) {
                 is AuthRepository.RegisterResult.Success -> {
+                    val full = repo.fetchMe() ?: result.user
                     _form.update {
-                        it.copy(submitting = false, successUser = result.user, errorMessage = null)
+                        it.copy(submitting = false, successUser = full, errorMessage = null)
                     }
                 }
                 is AuthRepository.RegisterResult.Failure -> {

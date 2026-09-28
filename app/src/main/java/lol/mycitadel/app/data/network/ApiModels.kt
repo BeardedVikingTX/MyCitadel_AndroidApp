@@ -46,9 +46,14 @@ data class UserDto(
     @SerialName("referral_code") val referralCode: String? = null,
     @SerialName("is_active") val isActive: Boolean = true,
     @SerialName("created_at") val createdAt: String? = null,
-    @SerialName("last_login_at") val lastLoginAt: String? = null
-)
+    @SerialName("last_login_at") val lastLoginAt: String? = null,
 
+    // Profile fields — populated by /users/me.php since the API update
+    @SerialName("display_name") val displayName: String? = null,
+    @SerialName("avatar_url")   val avatarUrl: String? = null,
+    @SerialName("banner_url")   val bannerUrl: String? = null,
+    @SerialName("tagline")      val tagline: String? = null,
+)
 @Serializable
 data class MeResponse(
     val status: String,

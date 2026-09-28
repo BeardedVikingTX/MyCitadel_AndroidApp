@@ -1,7 +1,7 @@
 package lol.mycitadel.app.data.repository
-
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import lol.mycitadel.app.data.network.UserDto
 import kotlinx.serialization.json.Json
 import lol.mycitadel.app.data.network.ApiError
 import lol.mycitadel.app.data.network.CitadelApi
@@ -9,7 +9,7 @@ import lol.mycitadel.app.data.network.CitadelClient
 import lol.mycitadel.app.data.network.Login2faRequest
 import lol.mycitadel.app.data.network.LoginRequest
 import lol.mycitadel.app.data.network.RegisterRequest
-import lol.mycitadel.app.data.network.UserDto
+
 
 class AuthRepository(
     private val api: CitadelApi,
@@ -191,5 +191,20 @@ class AuthRepository(
 
     fun clearCachedCsrf() {
         client.csrfToken = null
+    }
+
+    /**
+     * Fetch the full current-user profile via /users/me.php.
+     * The login/register responses only return the auth shell — this
+     * method returns the enriched user with avatar_url, display_name, etc.
+     * Returns null on failure (caller falls back to the partial user).
+     */
+    suspend fun fetchMe(): UserDto? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        try {
+            val response = api.me()
+            if (response.isSuccessful) response.body()?.user else null
+        } catch (_: Exception) {
+            null
+        }
     }
 }
