@@ -73,6 +73,7 @@ private const val DEFAULT_BANNER    = "https://mycitadel.lol/img/users/default/b
 @Composable
 fun DashboardScreen(
     onLogout: () -> Unit,
+    onEditProfile: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: DashboardViewModel = viewModel(factory = DashboardViewModel.Factory),
 ) {
@@ -90,6 +91,7 @@ fun DashboardScreen(
             refreshing = s.refreshing,
             onRefresh = { viewModel.refresh() },
             onLogout = onLogout,
+            onEditProfile = onEditProfile,
             modifier = modifier,
         )
     }
@@ -166,6 +168,7 @@ private fun DashboardContent(
     refreshing: Boolean,
     onRefresh: () -> Unit,
     onLogout: () -> Unit,
+    onEditProfile: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -180,7 +183,7 @@ private fun DashboardContent(
         item { StatusSplitSection(data) }
         item { BadgeGallerySection(data) }
         item { ActivityAndReferralSection(data) }
-        item { ActionBar(onLogout) }
+        item { ActionBar(onEditProfile = onEditProfile, onLogout = onLogout) }
     }
 }
 
@@ -1213,12 +1216,21 @@ private fun ReferralStat(value: Int, label: String, modifier: Modifier = Modifie
  * ════════════════════════════════════════════════════════════════ */
 
 @Composable
-private fun ActionBar(onLogout: () -> Unit) {
+private fun ActionBar(
+    onEditProfile: () -> Unit,
+    onLogout: () -> Unit,
+) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            CitadelButton(
+                text = "Edit Profile",
+                onClick = onEditProfile,
+                style = CitadelButtonStyle.Cyan,
+                modifier = Modifier.weight(1f),
+            )
             CitadelButton(
                 text = "Log Out",
                 onClick = onLogout,

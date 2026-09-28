@@ -5,6 +5,7 @@ import lol.mycitadel.app.data.network.CitadelClient
 import lol.mycitadel.app.data.network.PersistentCookieJar
 import lol.mycitadel.app.data.repository.AuthRepository
 import lol.mycitadel.app.data.repository.DashboardRepository
+import lol.mycitadel.app.data.repository.ProfileRepository
 
 class MyCitadelApp : Application() {
 
@@ -16,4 +17,9 @@ class MyCitadelApp : Application() {
     val dashboardRepository: DashboardRepository by lazy {
         DashboardRepository(apiClient.api)
     }
+
+    val profileRepository: ProfileRepository by lazy {
+        ProfileRepository(apiClient.api, applicationContext)
+    }
+
 }

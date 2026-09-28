@@ -4,6 +4,11 @@ import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import kotlinx.serialization.json.JsonObject
+import okhttp3.MultipartBody
+import retrofit2.http.Multipart
+import retrofit2.http.Part
+
 
 interface CitadelApi {
 
@@ -27,4 +32,30 @@ interface CitadelApi {
 
     @POST("auth/login_2fa.php")
     suspend fun login2fa(@Body body: Login2faRequest): Response<Login2faResponse>
+
+    // ── Profile ─────────────────────────────────────────────
+    @GET("users/profile.php")
+    suspend fun profile(): Response<ProfileResponse>
+
+    @POST("users/profile_update.php")
+    suspend fun profileUpdate(@Body body: JsonObject): Response<UpdateProfileResponse>
+
+    @POST("users/settings.php")
+    suspend fun profileSettings(@Body body: JsonObject): Response<BasicResponse>
+
+    @POST("users/update.php")
+    suspend fun accountUpdate(@Body body: AccountUpdateRequest): Response<MeResponse>
+
+    // ── Image uploads ───────────────────────────────────────
+    @Multipart
+    @POST("upload/avatar.php")
+    suspend fun uploadAvatar(@Part file: MultipartBody.Part): Response<UploadResponse>
+
+    @Multipart
+    @POST("upload/banner.php")
+    suspend fun uploadBanner(@Part file: MultipartBody.Part): Response<UploadResponse>
+
+    @Multipart
+    @POST("upload/wallpaper.php")
+    suspend fun uploadWallpaper(@Part file: MultipartBody.Part): Response<UploadResponse>
 }

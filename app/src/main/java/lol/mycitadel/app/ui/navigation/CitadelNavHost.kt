@@ -26,6 +26,7 @@ import lol.mycitadel.app.ui.screens.SecurityScreen
 import lol.mycitadel.app.ui.screens.TermsScreen
 import lol.mycitadel.app.ui.screens.DashboardScreen
 import lol.mycitadel.app.ui.screens.LoginScreen
+import lol.mycitadel.app.ui.screens.ProfileEditScreen
 
 @Composable
 fun CitadelNavHost(
@@ -131,6 +132,16 @@ fun CitadelNavHost(
                     onNavigateToRegister = {
                         navController.navigate(Routes.REGISTER) {
                             popUpTo(Routes.LOGIN) { inclusive = true }
+                        }
+                    },
+                )
+            }
+
+            composable(Routes.PROFILE) {
+                ProfileEditScreen(
+                    onBack = {
+                        navController.navigate(Routes.DASHBOARD) {
+                            popUpTo(Routes.PROFILE) { inclusive = true }
                         }
                     },
                 )
