@@ -1,21 +1,44 @@
-MIT License
-
 Copyright (c) 2026 Bearded Viking
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+ALL RIGHTS RESERVED.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+This software and associated documentation files (the "Software") are the
+exclusive property of Bearded Viking ("the Copyright Holder"). The Software
+is made publicly available solely for the purposes of:
+
+  (a) viewing and auditing the source code;
+  (b) security research and responsible disclosure under the terms
+      published at https://mycitadel.lol/security#bug-bounty;
+  (c) educational study of the techniques and architecture used.
+
+No other rights are granted, expressly or by implication.
+
+WITHOUT THE PRIOR WRITTEN PERMISSION OF THE COPYRIGHT HOLDER, YOU MAY NOT:
+
+  1. Copy, reproduce, or duplicate the Software, in whole or in part;
+  2. Modify, adapt, translate, or create derivative works based on the
+     Software;
+  3. Distribute, publish, sublicense, sell, rent, lease, or otherwise
+     transfer the Software or any derivative thereof;
+  4. Deploy the Software as part of any commercial product, service, or
+     platform;
+  5. Use the Software, in whole or in part, to operate a competing
+     service;
+  6. Remove, alter, or obscure any copyright notice, trademark, or other
+     proprietary notice contained in or displayed by the Software.
+
+THE NAMES "MYCITADEL", "MYCITADEL.LOL", THE RUNIC MARK "ᛗ", AND ALL RELATED
+BRANDING, LOGOS, AND VISUAL IDENTITY ARE TRADEMARKS OF THE COPYRIGHT HOLDER.
+THEY ARE NOT COVERED BY THE LIMITED VIEWING RIGHTS ABOVE AND MAY NOT BE
+USED WITHOUT PRIOR WRITTEN PERMISSION.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. IN NO EVENT SHALL
+THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF
+OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+For licensing inquiries: legal@mycitadel.lol
+For security disclosures: security@mycitadel.lol
