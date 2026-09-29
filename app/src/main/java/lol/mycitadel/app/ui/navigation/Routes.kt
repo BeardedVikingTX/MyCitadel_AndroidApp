@@ -21,4 +21,8 @@ object Routes {
 
     const val USER_VIEW = "user/{userId}"
     fun userView(userId: Int): String = "user/$userId"
+
+    const val MESSAGES = "messages"
+    const val CHAT = "chat/{conversationId}"
+    fun chat(conversationId: Long): String = "chat/$conversationId"
 }

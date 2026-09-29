@@ -104,4 +104,28 @@ interface CitadelApi {
 
     @POST("connections/block.php")
     suspend fun connectionBlock(@Body body: ConnectionRequest): Response<ConnectionActionResponse>
+
+    /* ── Messages ─────────────────────────────────────────────── */
+
+    @GET("messages/conversations.php")
+    suspend fun conversations(): Response<ConversationsListResponse>
+
+    @GET("messages/thread.php")
+    suspend fun messageThread(
+        @Query("conversation_id") conversationId: Long,
+        @Query("before_id") beforeId: Long? = null,
+        @Query("limit") limit: Int = 50,
+    ): Response<ThreadResponse>
+
+    @GET("messages/stream.php")
+    suspend fun messagesStream(@Query("since") since: Long): Response<StreamResponse>
+
+    @POST("messages/open.php")
+    suspend fun openConversation(@Body body: OpenConversationRequest): Response<OpenConversationResponse>
+
+    @POST("messages/send.php")
+    suspend fun sendMessage(@Body body: SendMessageRequest): Response<SendMessageResponse>
+
+    @POST("messages/read.php")
+    suspend fun markRead(@Body body: MarkReadRequest): Response<BasicMessageResponse>
 }

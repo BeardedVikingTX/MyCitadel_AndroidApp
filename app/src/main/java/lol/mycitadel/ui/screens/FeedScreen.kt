@@ -935,29 +935,7 @@ private fun ToastOverlay(
     }
 }
 
-/* ══════════════════════════════════════════════════════════════════
- * HELPERS
- * ════════════════════════════════════════════════════════════════ */
 
-private fun fmtRelativeTime(iso: String?): String {
-    if (iso.isNullOrBlank()) return "—"
-    return try {
-        val instant = java.time.Instant.parse(iso)
-        val diff = java.time.Duration.between(instant, java.time.Instant.now()).seconds
-        when {
-            diff < 60     -> "just now"
-            diff < 3600   -> "${diff / 60}m"
-            diff < 86400  -> "${diff / 3600}h"
-            diff < 604800 -> "${diff / 86400}d"
-            else          -> java.time.format.DateTimeFormatter
-                .ofPattern("MMM d")
-                .withZone(java.time.ZoneId.systemDefault())
-                .format(instant)
-        }
-    } catch (_: Exception) {
-        iso.take(10)
-    }
-}
 
 private fun formatBytes(n: Long): String {
     if (n <= 0) return "0 B"

@@ -8,7 +8,7 @@ import lol.mycitadel.app.data.repository.DashboardRepository
 import lol.mycitadel.app.data.repository.ProfileRepository
 import lol.mycitadel.app.data.repository.FeedRepository
 import lol.mycitadel.app.data.repository.UsersRepository
-
+import lol.mycitadel.app.data.repository.MessagesRepository
 class MyCitadelApp : Application() {
 
     val cookieJar: PersistentCookieJar by lazy { PersistentCookieJar(this) }
@@ -30,6 +30,10 @@ class MyCitadelApp : Application() {
 
     val usersRepository: UsersRepository by lazy {
         UsersRepository(apiClient.api)
+    }
+
+    val messagesRepository: MessagesRepository by lazy {
+        MessagesRepository(apiClient.api, applicationContext)
     }
 
 }

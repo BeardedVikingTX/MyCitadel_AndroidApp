@@ -32,6 +32,8 @@ import lol.mycitadel.app.ui.screens.UsersScreen
 import lol.mycitadel.app.ui.screens.UserViewScreen
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import lol.mycitadel.app.ui.screens.MessagesScreen
+import lol.mycitadel.app.ui.screens.ChatScreen
 
 @Composable
 fun CitadelNavHost(
@@ -175,6 +177,28 @@ fun CitadelNavHost(
                     onBack = { navController.popBackStack() },
                     onEditOwnProfile = { navController.navigate(Routes.PROFILE) },
                     onOpenDashboard = { navController.navigate(Routes.DASHBOARD) },
+                )
+            }
+
+            composable(Routes.MESSAGES) {
+                MessagesScreen(
+                    onOpenChat = { convId -> navController.navigate(Routes.chat(convId)) },
+                    onNewConversation = {
+                        // Simplest v1: route to Citizens, user picks there
+                        navController.navigate(Routes.USERS)
+                    },
+                )
+            }
+
+            composable(
+                route = Routes.CHAT,
+                arguments = listOf(navArgument("conversationId") { type = NavType.LongType }),
+            ) { backStackEntry ->
+                val convId = backStackEntry.arguments?.getLong("conversationId") ?: 0L
+                ChatScreen(
+                    conversationId = convId,
+                    currentUser = currentUser,
+                    onBack = { navController.popBackStack() },
                 )
             }
         }

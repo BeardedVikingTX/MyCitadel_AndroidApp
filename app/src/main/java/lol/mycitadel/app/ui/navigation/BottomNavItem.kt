@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.filled.Forum
 
 /**
  * A single item in the bottom navigation bar.
@@ -38,6 +39,7 @@ val AuthedNavItems: List<BottomNavItem> = listOf(
     BottomNavItem(Routes.DASHBOARD, "Dashboard", Icons.Filled.Info),
     BottomNavItem(Routes.USERS,     "Citizens",  Icons.Filled.Email),
     BottomNavItem(Routes.PROFILE,   "Profile",   Icons.Filled.Lock),
+    BottomNavItem(Routes.MESSAGES, "Messages", Icons.Filled.Forum)
 )
 
 /**
