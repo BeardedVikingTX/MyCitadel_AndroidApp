@@ -80,4 +80,28 @@ interface CitadelApi {
     @Multipart
     @POST("upload/media.php")
     suspend fun uploadMedia(@Part file: MultipartBody.Part): Response<UploadMediaResponse>
+
+    /* ── Users directory + profile view ─────────────────────── */
+
+    @GET("users/list.php")
+    suspend fun usersList(
+        @Query("q") q: String? = null,
+        @Query("limit") limit: Int = 24,
+        @Query("offset") offset: Int = 0,
+        @Query("exclude_connected") excludeConnected: Int? = null,
+    ): Response<UsersListResponse>
+
+    @GET("users/view.php")
+    suspend fun userView(@Query("id") id: Int): Response<ProfileViewResponse>
+
+    /* ── Connection actions ─────────────────────────────────── */
+
+    @POST("connections/request.php")
+    suspend fun connectionRequest(@Body body: ConnectionRequest): Response<ConnectionRequestResponse>
+
+    @POST("connections/accept.php")
+    suspend fun connectionAccept(@Body body: ConnectionRequest): Response<ConnectionActionResponse>
+
+    @POST("connections/block.php")
+    suspend fun connectionBlock(@Body body: ConnectionRequest): Response<ConnectionActionResponse>
 }

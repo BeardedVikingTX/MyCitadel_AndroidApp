@@ -7,6 +7,7 @@ import lol.mycitadel.app.data.repository.AuthRepository
 import lol.mycitadel.app.data.repository.DashboardRepository
 import lol.mycitadel.app.data.repository.ProfileRepository
 import lol.mycitadel.app.data.repository.FeedRepository
+import lol.mycitadel.app.data.repository.UsersRepository
 
 class MyCitadelApp : Application() {
 
@@ -25,6 +26,10 @@ class MyCitadelApp : Application() {
 
     val feedRepository: FeedRepository by lazy {
         FeedRepository(apiClient.api, applicationContext)
+    }
+
+    val usersRepository: UsersRepository by lazy {
+        UsersRepository(apiClient.api)
     }
 
 }

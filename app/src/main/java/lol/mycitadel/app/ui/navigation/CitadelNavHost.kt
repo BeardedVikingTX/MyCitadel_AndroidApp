@@ -28,6 +28,10 @@ import lol.mycitadel.app.ui.screens.DashboardScreen
 import lol.mycitadel.app.ui.screens.LoginScreen
 import lol.mycitadel.app.ui.screens.ProfileEditScreen
 import lol.mycitadel.app.ui.screens.FeedScreen
+import lol.mycitadel.app.ui.screens.UsersScreen
+import lol.mycitadel.app.ui.screens.UserViewScreen
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 
 @Composable
 fun CitadelNavHost(
@@ -150,6 +154,28 @@ fun CitadelNavHost(
 
             composable(Routes.FEED) {
                 FeedScreen(currentUser = currentUser)
+            }
+
+            composable(Routes.USERS) {
+                UsersScreen(
+                    currentUser = currentUser,
+                    onOpenProfile = { id ->
+                        navController.navigate(Routes.userView(id))
+                    },
+                )
+            }
+
+            composable(
+                route = Routes.USER_VIEW,
+                arguments = listOf(navArgument("userId") { type = NavType.IntType }),
+            ) { backStackEntry ->
+                val userId = backStackEntry.arguments?.getInt("userId") ?: 0
+                UserViewScreen(
+                    userId = userId,
+                    onBack = { navController.popBackStack() },
+                    onEditOwnProfile = { navController.navigate(Routes.PROFILE) },
+                    onOpenDashboard = { navController.navigate(Routes.DASHBOARD) },
+                )
             }
         }
     }

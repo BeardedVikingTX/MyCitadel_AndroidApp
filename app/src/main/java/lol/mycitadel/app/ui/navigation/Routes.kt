@@ -18,4 +18,7 @@ object Routes {
     const val FEED      = "feed"
     const val USERS     = "users"
     const val PROFILE   = "profile"
+
+    const val USER_VIEW = "user/{userId}"
+    fun userView(userId: Int): String = "user/$userId"
 }
