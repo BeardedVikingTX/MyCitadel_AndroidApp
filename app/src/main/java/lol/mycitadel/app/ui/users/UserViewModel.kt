@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import lol.mycitadel.app.MyCitadelApp
 import lol.mycitadel.app.data.network.ProfileFull
 import lol.mycitadel.app.data.repository.UsersRepository
+import lol.mycitadel.app.data.repository.MessagesRepository
 
 data class UserViewState(
     val loading: Boolean = true,
@@ -24,11 +25,13 @@ data class UserViewState(
     val actionBusy: Boolean = false,
     val toast: String? = null,
     val toastIsError: Boolean = false,
+    val openingChatFor: Set<Int> = emptySet(),
 )
 
 class UserViewModel(
     private val repo: UsersRepository,
     private val userId: Int,
+    private val messagesRepo: MessagesRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(UserViewState())
@@ -79,6 +82,29 @@ class UserViewModel(
 
     fun hideUser() = runAndExit("Hidden.") {
         repo.blockUser(userId)
+    }
+
+    fun startConversation(targetUserId: Int, onOpen: (Long) -> Unit) {
+        if (targetUserId in _state.value.openingChatFor) return
+        _state.update { it.copy(openingChatFor = it.openingChatFor + targetUserId) }
+
+        viewModelScope.launch {
+            when (val r = messagesRepo.openConversation(targetUserId)) {
+                is MessagesRepository.Result.Success -> {
+                    _state.update { it.copy(openingChatFor = it.openingChatFor - targetUserId) }
+                    onOpen(r.data)
+                }
+                is MessagesRepository.Result.Failure -> {
+                    _state.update {
+                        it.copy(
+                            openingChatFor = it.openingChatFor - targetUserId,
+                            toast = r.message,
+                            toastIsError = true,
+                        )
+                    }
+                }
+            }
+        }
     }
 
     /** Update connection state in-place and refresh the profile. */
@@ -133,7 +159,11 @@ class UserViewModel(
         fun factory(userId: Int): ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = this[APPLICATION_KEY] as MyCitadelApp
-                UserViewModel(app.usersRepository, userId)
+                UserViewModel(
+                    app.usersRepository,
+                    userId,
+                    app.messagesRepository,
+                )
             }
         }
     }

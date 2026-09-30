@@ -32,7 +32,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -55,6 +54,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -65,6 +65,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 import lol.mycitadel.app.data.network.AttachmentDto
+import lol.mycitadel.app.data.network.CommentDto
 import lol.mycitadel.app.data.network.PostDto
 import lol.mycitadel.app.data.network.UserDto
 import lol.mycitadel.app.ui.components.CitadelButton
@@ -75,6 +76,8 @@ import lol.mycitadel.app.ui.feed.ComposerState
 import lol.mycitadel.app.ui.feed.FeedScope
 import lol.mycitadel.app.ui.feed.FeedState
 import lol.mycitadel.app.ui.feed.FeedViewModel
+import lol.mycitadel.app.ui.feed.PostCommentsState
+import lol.mycitadel.app.ui.feed.TierLimits
 import lol.mycitadel.app.ui.theme.Blood
 import lol.mycitadel.app.ui.theme.Cyan
 import lol.mycitadel.app.ui.theme.CyanBright
@@ -86,6 +89,28 @@ import lol.mycitadel.app.ui.theme.TextFaint
 import lol.mycitadel.app.ui.theme.Void
 
 private const val DEFAULT_AVATAR = "https://mycitadel.lol/img/users/default/avatar.png"
+
+/* ══════════════════════════════════════════════════════════════════
+ * REACTION VOCABULARY
+ * ════════════════════════════════════════════════════════════════ */
+
+private val REACTION_ICONS = mapOf(
+    "like"    to "👍",
+    "dislike" to "👎",
+    "heart"   to "❤",
+    "angry"   to "😡",
+)
+private val REACTION_LABELS = mapOf(
+    "like"    to "Like",
+    "dislike" to "Dislike",
+    "heart"   to "Heart",
+    "angry"   to "Angry",
+)
+
+
+/* ══════════════════════════════════════════════════════════════════
+ * ENTRY POINT
+ * ════════════════════════════════════════════════════════════════ */
 
 @Composable
 fun FeedScreen(
@@ -108,7 +133,6 @@ fun FeedScreen(
                 FeedMain(state, currentUser, viewModel)
         }
 
-        // Toast overlay — auto-dismisses after 2.4s
         state.toast?.let { msg ->
             ToastOverlay(
                 message = msg,
@@ -118,6 +142,7 @@ fun FeedScreen(
         }
     }
 }
+
 
 /* ══════════════════════════════════════════════════════════════════
  * LOADING / ERROR
@@ -168,8 +193,9 @@ private fun FeedError(message: String, onRetry: () -> Unit) {
     }
 }
 
+
 /* ══════════════════════════════════════════════════════════════════
- * MAIN
+ * MAIN LAYOUT
  * ════════════════════════════════════════════════════════════════ */
 
 @Composable
@@ -178,26 +204,26 @@ private fun FeedMain(
     currentUser: UserDto?,
     vm: FeedViewModel,
 ) {
+    val isPremium = currentUser?.premium == true
+
     Column(modifier = Modifier.fillMaxSize()) {
 
-        // ── Scope tabs ────────────────────────────────────────────
         ScopeRow(
             current = state.scope,
             onSelect = vm::changeScope,
         )
 
-        // ── Composer ──────────────────────────────────────────────
         Composer(
             user = currentUser,
             composer = state.composer,
+            isPremium = isPremium,
             onTextChange = vm::onComposerText,
             onVisibilityChange = vm::onComposerVisibility,
-            onPickAttachments = { uri -> vm.addAttachment(uri) },
+            onPickAttachments = { uri -> vm.addAttachment(uri, isPremium) },
             onRemoveAttachment = vm::removeAttachment,
             onSubmit = { vm.submitPost(currentUser) },
         )
 
-        // ── Posts list ────────────────────────────────────────────
         Box(modifier = Modifier.weight(1f)) {
             if (state.posts.isEmpty()) {
                 EmptyFeed()
@@ -213,8 +239,14 @@ private fun FeedMain(
                     ) { post ->
                         PostCard(
                             post = post,
+                            currentUser = currentUser,
+                            commentsState = state.commentsByPost[post.id] ?: PostCommentsState(),
                             onEdit = { content, vis -> vm.updatePost(post.id, content, vis) },
                             onDelete = { vm.deletePost(post.id) },
+                            onToggleReaction = { reaction -> vm.toggleReaction(post.id, reaction) },
+                            onToggleComments = { vm.toggleComments(post.id) },
+                            onCommentDraftChange = { text -> vm.onCommentDraftChange(post.id, text) },
+                            onSubmitComment = { vm.submitComment(post.id, currentUser) },
                         )
                     }
 
@@ -231,6 +263,7 @@ private fun FeedMain(
         }
     }
 }
+
 
 /* ══════════════════════════════════════════════════════════════════
  * SCOPE ROW
@@ -269,20 +302,26 @@ private fun ScopeRow(
     }
 }
 
+
 /* ══════════════════════════════════════════════════════════════════
- * COMPOSER
+ * COMPOSER — tier-aware
  * ════════════════════════════════════════════════════════════════ */
 
 @Composable
 private fun Composer(
     user: UserDto?,
     composer: ComposerState,
+    isPremium: Boolean,
     onTextChange: (String) -> Unit,
     onVisibilityChange: (String) -> Unit,
     onPickAttachments: (Uri) -> Unit,
     onRemoveAttachment: (Int) -> Unit,
     onSubmit: () -> Unit,
 ) {
+    val maxChars       = remember(isPremium) { TierLimits.postMaxChars(isPremium) }
+    val maxAttachments = remember(isPremium) { TierLimits.postMaxAttachments(isPremium) }
+    val warnAt         = (maxChars * 0.9).toInt()
+
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenMultipleDocuments()
     ) { uris: List<Uri> ->
@@ -387,12 +426,16 @@ private fun Composer(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Attach button
+            val attachDisabled = composer.attachments.size >= maxAttachments || composer.uploading > 0
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(999.dp))
-                    .border(1.dp, Cyan.copy(alpha = 0.5f), RoundedCornerShape(999.dp))
-                    .clickable(enabled = composer.attachments.size < 6 && composer.uploading == 0) {
+                    .border(
+                        1.dp,
+                        Cyan.copy(alpha = if (attachDisabled) 0.15f else 0.5f),
+                        RoundedCornerShape(999.dp),
+                    )
+                    .clickable(enabled = !attachDisabled) {
                         picker.launch(arrayOf(
                             "image/*",
                             "video/*",
@@ -409,13 +452,13 @@ private fun Composer(
                     Icon(
                         imageVector = Icons.Filled.Add,
                         contentDescription = "Attach",
-                        tint = Cyan,
+                        tint = if (attachDisabled) TextFaint else Cyan,
                         modifier = Modifier.size(14.dp),
                     )
                     Spacer(Modifier.width(4.dp))
                     Text(
                         text = "Attach",
-                        color = Cyan,
+                        color = if (attachDisabled) TextFaint else Cyan,
                         fontSize = 11.sp,
                         letterSpacing = 0.5.sp,
                     )
@@ -425,8 +468,8 @@ private fun Composer(
             Spacer(Modifier.weight(1f))
 
             Text(
-                text = "${composer.text.length} / 2000",
-                color = if (composer.text.length > 1800) Gold else TextFaint,
+                text = "${composer.text.length} / $maxChars",
+                color = if (composer.text.length > warnAt) Gold else TextFaint,
                 fontSize = 10.sp,
                 fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
             )
@@ -442,6 +485,7 @@ private fun Composer(
         }
     }
 }
+
 
 @Composable
 private fun AttachmentChip(att: AttachmentDto, onRemove: () -> Unit) {
@@ -473,7 +517,6 @@ private fun AttachmentChip(att: AttachmentDto, onRemove: () -> Unit) {
             }
         }
 
-        // Remove ×
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
@@ -508,20 +551,30 @@ private fun UploadingChip() {
     }
 }
 
+
 /* ══════════════════════════════════════════════════════════════════
- * POST CARD
+ * POST CARD — with reactions + comments
  * ════════════════════════════════════════════════════════════════ */
 
 @Composable
 private fun PostCard(
     post: PostDto,
+    currentUser: UserDto?,
+    commentsState: PostCommentsState,
     onEdit: (content: String, visibility: String) -> Unit,
     onDelete: () -> Unit,
+    onToggleReaction: (String) -> Unit,
+    onToggleComments: () -> Unit,
+    onCommentDraftChange: (String) -> Unit,
+    onSubmitComment: () -> Unit,
 ) {
     var editing by remember { mutableStateOf(false) }
     var editText by remember { mutableStateOf(post.content) }
     var editVis by remember { mutableStateOf(post.visibility) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    val isPremium = currentUser?.premium == true
+    val allowedReactions = remember(isPremium) { TierLimits.reactions(isPremium) }
 
     CitadelPanel(
         modifier = Modifier
@@ -568,24 +621,38 @@ private fun PostCard(
                         fontSize = 10.sp,
                     )
                     if (post.isEdited) {
-                        Text("· edited", color = TextFaint, fontSize = 10.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
+                        Text(
+                            "· edited",
+                            color = TextFaint,
+                            fontSize = 10.sp,
+                            fontStyle = FontStyle.Italic,
+                        )
                     }
                 }
             }
 
-            // Own-post actions
             if (post.isOwn && !editing) {
                 IconButton(
                     onClick = { editing = true; editText = post.content; editVis = post.visibility },
                     modifier = Modifier.size(32.dp),
                 ) {
-                    Icon(Icons.Filled.Edit, contentDescription = "Edit", tint = Cyan, modifier = Modifier.size(16.dp))
+                    Icon(
+                        Icons.Filled.Edit,
+                        contentDescription = "Edit",
+                        tint = Cyan,
+                        modifier = Modifier.size(16.dp),
+                    )
                 }
                 IconButton(
                     onClick = { showDeleteConfirm = true },
                     modifier = Modifier.size(32.dp),
                 ) {
-                    Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Blood, modifier = Modifier.size(16.dp))
+                    Icon(
+                        Icons.Filled.Delete,
+                        contentDescription = "Delete",
+                        tint = Blood,
+                        modifier = Modifier.size(16.dp),
+                    )
                 }
             }
         }
@@ -657,9 +724,37 @@ private fun PostCard(
                 AttachmentGrid(post.attachments)
             }
         }
+
+        // ── Reaction bar + comment toggle (hidden during edit) ──
+        if (!editing) {
+            Spacer(Modifier.height(10.dp))
+            ReactionBar(
+                viewerReaction = post.viewerReaction,
+                reactionCount  = post.reactionCount,
+                allowed        = allowedReactions,
+                onToggle       = onToggleReaction,
+            )
+
+            Spacer(Modifier.height(8.dp))
+            CommentToggleRow(
+                commentCount = post.commentCount,
+                expanded     = commentsState.expanded,
+                onClick      = onToggleComments,
+            )
+        }
     }
 
-    // ── Delete confirmation dialog ────────────────────────────────
+    // ── Comment thread (outside the panel, expands below) ───────
+    if (commentsState.expanded && !editing) {
+        CommentThread(
+            state = commentsState,
+            isPremium = isPremium,
+            onDraftChange = onCommentDraftChange,
+            onSubmit = onSubmitComment,
+        )
+    }
+
+    // ── Delete confirmation ─────────────────────────────────────
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
@@ -684,6 +779,279 @@ private fun PostCard(
         )
     }
 }
+
+
+/* ══════════════════════════════════════════════════════════════════
+ * REACTION BAR
+ * ════════════════════════════════════════════════════════════════ */
+
+@Composable
+private fun ReactionBar(
+    viewerReaction: String?,
+    reactionCount: Int,
+    allowed: List<String>,
+    onToggle: (String) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        allowed.forEach { reaction ->
+            ReactionButton(
+                reaction = reaction,
+                active   = viewerReaction == reaction,
+                onClick  = { onToggle(reaction) },
+            )
+        }
+
+        Spacer(Modifier.weight(1f))
+
+        if (reactionCount > 0) {
+            Text(
+                text = "$reactionCount reaction${if (reactionCount == 1) "" else "s"}",
+                color = TextFaint,
+                fontSize = 10.sp,
+                fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ReactionButton(
+    reaction: String,
+    active: Boolean,
+    onClick: () -> Unit,
+) {
+    val accent: Color = when (reaction) {
+        "like"    -> Cyan
+        "dislike" -> Blood
+        "heart"   -> Color(0xFFEC4899)
+        "angry"   -> Color(0xFFF97316)
+        else      -> Cyan
+    }
+    val bg        = if (active) accent.copy(alpha = 0.14f) else Color.Transparent
+    val fg        = if (active) accent else TextDim
+    val borderCol = if (active) accent else Cyan.copy(alpha = 0.15f)
+
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(bg)
+            .border(1.dp, borderCol, RoundedCornerShape(999.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = REACTION_ICONS[reaction] ?: "•",
+                fontSize = 13.sp,
+                lineHeight = 13.sp,
+            )
+            Spacer(Modifier.width(5.dp))
+            Text(
+                text = REACTION_LABELS[reaction] ?: reaction,
+                color = fg,
+                fontSize = 10.sp,
+                letterSpacing = 0.5.sp,
+            )
+        }
+    }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+ * COMMENT TOGGLE + THREAD
+ * ════════════════════════════════════════════════════════════════ */
+
+@Composable
+private fun CommentToggleRow(
+    commentCount: Int,
+    expanded: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(999.dp))
+                .background(if (expanded) Cyan.copy(alpha = 0.08f) else Color.Transparent)
+                .border(
+                    1.dp,
+                    if (expanded) Cyan else Cyan.copy(alpha = 0.15f),
+                    RoundedCornerShape(999.dp),
+                )
+                .clickable(onClick = onClick)
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("💬", fontSize = 12.sp)
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = "Comments ($commentCount)",
+                    color = if (expanded) CyanBright else TextDim,
+                    fontSize = 10.sp,
+                    letterSpacing = 0.5.sp,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CommentThread(
+    state: PostCommentsState,
+    isPremium: Boolean,
+    onDraftChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+) {
+    val maxChars = remember(isPremium) { TierLimits.commentMaxChars(isPremium) }
+    val counter  = state.draft.length
+    val warnAt   = (maxChars * 0.9).toInt()
+
+    CitadelPanel(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 2.dp),
+        borderColor = Cyan.copy(alpha = 0.12f),
+    ) {
+        when {
+            state.loading -> {
+                Box(
+                    Modifier.fillMaxWidth().padding(14.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(
+                        color = Cyan,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+            }
+            state.comments.isEmpty() && state.loaded -> {
+                Text(
+                    text = "No comments yet. Be the first.",
+                    color = TextFaint,
+                    fontSize = 11.sp,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                    textAlign = TextAlign.Center,
+                    fontStyle = FontStyle.Italic,
+                )
+            }
+            else -> {
+                state.comments.forEach { c ->
+                    CommentItem(c)
+                }
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
+
+        OutlinedTextField(
+            value = state.draft,
+            onValueChange = onDraftChange,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp, max = 140.dp),
+            placeholder = {
+                Text(
+                    text = "Write a comment…",
+                    color = TextFaint,
+                    fontSize = 13.sp,
+                )
+            },
+            maxLines = 6,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Cyan,
+                unfocusedBorderColor = Cyan.copy(alpha = 0.25f),
+                cursorColor = CyanBright,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+            ),
+            shape = RoundedCornerShape(10.dp),
+        )
+
+        Spacer(Modifier.height(6.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "$counter / $maxChars",
+                color = if (counter > warnAt) Gold else TextFaint,
+                fontSize = 10.sp,
+                fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
+            )
+            Spacer(Modifier.weight(1f))
+            CitadelButton(
+                text = if (state.submitting) "Posting…" else "Comment",
+                onClick = onSubmit,
+                style = CitadelButtonStyle.Gold,
+                enabled = state.draft.isNotBlank() && !state.submitting,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CommentItem(c: CommentDto) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        val avatarUrl = c.author.avatarUrl ?: DEFAULT_AVATAR
+        AsyncImage(
+            model = avatarUrl,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .border(1.dp, Gold.copy(alpha = 0.35f), CircleShape),
+        )
+        Spacer(Modifier.width(10.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = c.author.displayName ?: c.author.username,
+                    color = if (c.viewerCanDelete) CyanBright else Color(0xFFE0E6ED),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = "@${c.author.username}",
+                    color = Cyan,
+                    fontSize = 10.sp,
+                    fontFamily = MaterialTheme.typography.labelSmall.fontFamily,
+                )
+                Text("·", color = TextFaint, fontSize = 10.sp)
+                Text(
+                    text = fmtRelativeTime(c.createdAt),
+                    color = TextFaint,
+                    fontSize = 10.sp,
+                )
+            }
+            Spacer(Modifier.height(3.dp))
+            Text(
+                text = c.content,
+                color = TextDim,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+            )
+        }
+    }
+}
+
 
 /* ══════════════════════════════════════════════════════════════════
  * ATTACHMENT GRID
@@ -775,7 +1143,12 @@ private fun AttachmentCell(
                 .clickable { onOpen(att.url) },
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = Cyan, modifier = Modifier.size(32.dp))
+            Icon(
+                Icons.Filled.PlayArrow,
+                contentDescription = null,
+                tint = Cyan,
+                modifier = Modifier.size(32.dp),
+            )
         }
         else -> FileCard(att, modifier, onOpen)
     }
@@ -844,6 +1217,7 @@ private fun FileCard(att: AttachmentDto, modifier: Modifier, onOpen: (String) ->
     }
 }
 
+
 /* ══════════════════════════════════════════════════════════════════
  * LOAD MORE + EMPTY
  * ════════════════════════════════════════════════════════════════ */
@@ -857,7 +1231,11 @@ private fun LoadMoreRow(loading: Boolean, onClick: () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         if (loading) {
-            CircularProgressIndicator(color = Cyan, strokeWidth = 2.dp, modifier = Modifier.size(28.dp))
+            CircularProgressIndicator(
+                color = Cyan,
+                strokeWidth = 2.dp,
+                modifier = Modifier.size(28.dp),
+            )
         } else {
             CitadelButton(
                 text = "Load More",
@@ -893,6 +1271,7 @@ private fun EmptyFeed() {
         }
     }
 }
+
 
 /* ══════════════════════════════════════════════════════════════════
  * TOAST OVERLAY
@@ -936,6 +1315,9 @@ private fun ToastOverlay(
 }
 
 
+/* ══════════════════════════════════════════════════════════════════
+ * HELPERS
+ * ════════════════════════════════════════════════════════════════ */
 
 private fun formatBytes(n: Long): String {
     if (n <= 0) return "0 B"

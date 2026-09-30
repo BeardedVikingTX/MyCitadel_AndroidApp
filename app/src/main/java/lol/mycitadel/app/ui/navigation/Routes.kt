@@ -25,4 +25,9 @@ object Routes {
     const val MESSAGES = "messages"
     const val CHAT = "chat/{conversationId}"
     fun chat(conversationId: Long): String = "chat/$conversationId"
+
+    const val NOTIFICATIONS = "notifications"
+
+    const val POST_VIEW = "post/{postId}"
+    fun postView(postId: Int): String = "post/$postId"
 }

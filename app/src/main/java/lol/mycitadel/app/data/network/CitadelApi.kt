@@ -128,4 +128,48 @@ interface CitadelApi {
 
     @POST("messages/read.php")
     suspend fun markRead(@Body body: MarkReadRequest): Response<BasicMessageResponse>
+
+    /* ── Reactions ─────────────────────────────────────────── */
+
+    @POST("reactions/toggle.php")
+    suspend fun toggleReaction(
+        @Body body: ToggleReactionRequest
+    ): Response<ToggleReactionResponse>
+
+    /* ── Comments ──────────────────────────────────────────── */
+
+    @GET("comments/list.php")
+    suspend fun commentsList(
+        @Query("post_id") postId: Int,
+        @Query("limit")   limit: Int = 50,
+        @Query("offset")  offset: Int = 0,
+    ): Response<CommentsListResponse>
+
+    @POST("comments/create.php")
+    suspend fun createComment(
+        @Body body: CreateCommentRequest
+    ): Response<CreateCommentResponse>
+
+    @POST("comments/delete.php")
+    suspend fun deleteComment(
+        @Body body: DeleteCommentRequest
+    ): Response<DeleteCommentResponse>
+
+    /* ── Notifications ─────────────────────────────────────────── */
+
+    @GET("notifications/list.php")
+    suspend fun notificationsList(
+        @Query("unread_only") unreadOnly: Int? = null,
+        @Query("limit") limit: Int = 50,
+    ): Response<NotificationsListResponse>
+
+    @POST("notifications/read.php")
+    suspend fun markNotificationRead(
+        @Body body: MarkNotificationReadRequest,
+    ): Response<MarkReadResponse>
+
+    @POST("notifications/delete.php")
+    suspend fun deleteNotification(
+        @Body body: DeleteNotificationRequest,
+    ): Response<DeleteNotificationResponse>
 }

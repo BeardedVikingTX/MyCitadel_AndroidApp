@@ -10,7 +10,12 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import lol.mycitadel.app.data.network.*
 import java.io.IOException
-
+import lol.mycitadel.app.data.network.CommentDto
+import lol.mycitadel.app.data.network.CommentsListResponse
+import lol.mycitadel.app.data.network.CreateCommentRequest
+import lol.mycitadel.app.data.network.CreateCommentResponse
+import lol.mycitadel.app.data.network.ToggleReactionRequest
+import lol.mycitadel.app.data.network.ToggleReactionResponse
 /**
  * Repository for feed operations:
  *   • Fetch timeline (all / self / connections) with cursor pagination
@@ -261,5 +266,140 @@ class FeedRepository(
         } catch (_: Exception) {
             "Request failed ($httpCode)."
         }
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+ * REACTIONS
+ * ============================================================ */
+
+    suspend fun toggleReaction(
+        postId: Int,
+        reaction: String,
+    ): ReactionResult = withContext(Dispatchers.IO) {
+        try {
+            val response = api.toggleReaction(
+                ToggleReactionRequest(
+                    targetType = "post",
+                    targetId   = postId,
+                    reaction   = reaction,
+                )
+            )
+
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body?.status == "ok") {
+                    return@withContext ReactionResult.Success(
+                        reaction = body.reaction,
+                        count    = body.count,
+                    )
+                }
+            }
+
+            val raw = response.errorBody()?.string().orEmpty()
+            ReactionResult.Failure(
+                parseErrorCode(response.code(), raw),
+                parseErrorMessage(response.code(), raw),
+            )
+        } catch (e: IOException) {
+            ReactionResult.Failure("network_error", "Network error: ${e.message ?: "unknown"}")
+        } catch (e: Exception) {
+            ReactionResult.Failure("network_error", e.message ?: "unknown")
+        }
+    }
+
+    sealed interface ReactionResult {
+        data class Success(
+            val reaction: String?,     // null = removed
+            val count: Int,
+        ) : ReactionResult
+        data class Failure(val code: String, val message: String) : ReactionResult
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+     * COMMENTS
+     * ============================================================ */
+
+    suspend fun listComments(postId: Int): CommentsResult = withContext(Dispatchers.IO) {
+        try {
+            val response = api.commentsList(postId = postId, limit = 50, offset = 0)
+
+            if (!response.isSuccessful) {
+                val raw = response.errorBody()?.string().orEmpty()
+                return@withContext CommentsResult.Failure(
+                    parseErrorCode(response.code(), raw),
+                    parseErrorMessage(response.code(), raw),
+                )
+            }
+
+            val body = response.body()
+            if (body?.status != "ok") {
+                return@withContext CommentsResult.Failure("malformed", "Unexpected response.")
+            }
+
+            CommentsResult.Success(
+                comments = body.comments,
+                total    = body.total,
+                hasMore  = body.hasMore,
+            )
+        } catch (e: IOException) {
+            CommentsResult.Failure("network_error", "Network error: ${e.message ?: "unknown"}")
+        } catch (e: Exception) {
+            CommentsResult.Failure("network_error", e.message ?: "unknown")
+        }
+    }
+
+    suspend fun createComment(
+        postId: Int,
+        content: String,
+        parentId: Int? = null,
+    ): CreateCommentResult = withContext(Dispatchers.IO) {
+        try {
+            val response = api.createComment(
+                CreateCommentRequest(
+                    postId   = postId,
+                    content  = content,
+                    parentId = parentId,
+                )
+            )
+
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body?.status == "ok") {
+                    return@withContext CreateCommentResult.Success(
+                        commentId = body.commentId,
+                        parentId  = body.parentId,
+                        isReply   = body.isReply,
+                    )
+                }
+            }
+
+            val raw = response.errorBody()?.string().orEmpty()
+            CreateCommentResult.Failure(
+                parseErrorCode(response.code(), raw),
+                parseErrorMessage(response.code(), raw),
+            )
+        } catch (e: IOException) {
+            CreateCommentResult.Failure("network_error", "Network error: ${e.message ?: "unknown"}")
+        } catch (e: Exception) {
+            CreateCommentResult.Failure("network_error", e.message ?: "unknown")
+        }
+    }
+
+    sealed interface CommentsResult {
+        data class Success(
+            val comments: List<CommentDto>,
+            val total: Int,
+            val hasMore: Boolean,
+        ) : CommentsResult
+        data class Failure(val code: String, val message: String) : CommentsResult
+    }
+
+    sealed interface CreateCommentResult {
+        data class Success(
+            val commentId: Int,
+            val parentId: Int?,
+            val isReply: Boolean,
+        ) : CreateCommentResult
+        data class Failure(val code: String, val message: String) : CreateCommentResult
     }
 }

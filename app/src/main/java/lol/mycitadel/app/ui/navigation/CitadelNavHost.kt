@@ -34,6 +34,7 @@ import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import lol.mycitadel.app.ui.screens.MessagesScreen
 import lol.mycitadel.app.ui.screens.ChatScreen
+import lol.mycitadel.app.ui.screens.NotificationsScreen
 
 @Composable
 fun CitadelNavHost(
@@ -164,6 +165,9 @@ fun CitadelNavHost(
                     onOpenProfile = { id ->
                         navController.navigate(Routes.userView(id))
                     },
+                    onOpenChat = { convId ->
+                        navController.navigate(Routes.chat(convId))
+                    },
                 )
             }
 
@@ -199,6 +203,13 @@ fun CitadelNavHost(
                     conversationId = convId,
                     currentUser = currentUser,
                     onBack = { navController.popBackStack() },
+                )
+            }
+
+            composable(Routes.NOTIFICATIONS) {
+                NotificationsScreen(
+                    onOpenUser = { id -> navController.navigate(Routes.userView(id)) },
+                    onOpenPost = { id -> navController.navigate(Routes.postView(id)) },
                 )
             }
         }

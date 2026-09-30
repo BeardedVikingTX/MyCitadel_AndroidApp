@@ -17,6 +17,7 @@ import lol.mycitadel.app.MyCitadelApp
 import lol.mycitadel.app.data.network.UserDto
 import lol.mycitadel.app.data.network.UserSummary
 import lol.mycitadel.app.data.repository.UsersRepository
+import lol.mycitadel.app.data.repository.MessagesRepository
 
 enum class DirectoryFilter(val label: String) {
     All("All"),
@@ -35,9 +36,13 @@ data class UsersState(
     val fatalError: String? = null,
     val toast: String? = null,
     val toastIsError: Boolean = false,
+    val openingChatFor: Set<Int> = emptySet(),
 )
 
-class UsersViewModel(private val repo: UsersRepository) : ViewModel() {
+class UsersViewModel(
+    private val repo: UsersRepository,
+    private val messagesRepo: MessagesRepository,
+) : ViewModel() {
 
     private val _state = MutableStateFlow(UsersState())
     val state: StateFlow<UsersState> = _state.asStateFlow()
@@ -49,7 +54,9 @@ class UsersViewModel(private val repo: UsersRepository) : ViewModel() {
         _state.update { it.copy(self = user) }
     }
 
-    init { load(reset = true) }
+    init {
+        load(reset = true)
+    }
 
     /* ── Search + filter ─────────────────────────────────────── */
 
@@ -106,10 +113,19 @@ class UsersViewModel(private val repo: UsersRepository) : ViewModel() {
                         )
                     }
                 }
+
                 is UsersRepository.ListResult.Failure -> {
                     _state.update { st ->
-                        if (reset) st.copy(loading = false, loadingMore = false, fatalError = result.message)
-                        else st.copy(loadingMore = false, toast = result.message, toastIsError = true)
+                        if (reset) st.copy(
+                            loading = false,
+                            loadingMore = false,
+                            fatalError = result.message
+                        )
+                        else st.copy(
+                            loadingMore = false,
+                            toast = result.message,
+                            toastIsError = true
+                        )
                     }
                 }
             }
@@ -142,6 +158,30 @@ class UsersViewModel(private val repo: UsersRepository) : ViewModel() {
         repo.blockUser(user.id)
     }
 
+    fun startConversation(targetUserId: Int, onOpen: (Long) -> Unit) {
+        if (targetUserId in _state.value.openingChatFor) return
+        _state.update { it.copy(openingChatFor = it.openingChatFor + targetUserId) }
+
+        viewModelScope.launch {
+            when (val r = messagesRepo.openConversation(targetUserId)) {
+                is MessagesRepository.Result.Success -> {
+                    _state.update { it.copy(openingChatFor = it.openingChatFor - targetUserId) }
+                    onOpen(r.data)
+                }
+
+                is MessagesRepository.Result.Failure -> {
+                    _state.update {
+                        it.copy(
+                            openingChatFor = it.openingChatFor - targetUserId,
+                            toast = r.message,
+                            toastIsError = true,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     private fun updateState(
         userId: Int,
         newState: String,
@@ -160,6 +200,7 @@ class UsersViewModel(private val repo: UsersRepository) : ViewModel() {
                         )
                     }
                 }
+
                 is UsersRepository.ActionResult.Failure ->
                     _state.update { it.copy(toast = r.message, toastIsError = true) }
             }
@@ -181,6 +222,7 @@ class UsersViewModel(private val repo: UsersRepository) : ViewModel() {
                         )
                     }
                 }
+
                 is UsersRepository.ActionResult.Failure ->
                     _state.update { it.copy(toast = r.message, toastIsError = true) }
             }
@@ -188,9 +230,9 @@ class UsersViewModel(private val repo: UsersRepository) : ViewModel() {
     }
 
     private fun toastForAction(state: String) = when (state) {
-        "connected"   -> "Connected. +25 reputation."
+        "connected" -> "Connected. +25 reputation."
         "pending_out" -> "Request sent."
-        else          -> "Updated."
+        else -> "Updated."
     }
 
     fun clearToast() {
@@ -201,7 +243,10 @@ class UsersViewModel(private val repo: UsersRepository) : ViewModel() {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = this[APPLICATION_KEY] as MyCitadelApp
-                UsersViewModel(app.usersRepository)
+                UsersViewModel(
+                    app.usersRepository,
+                    app.messagesRepository,
+                )
             }
         }
     }

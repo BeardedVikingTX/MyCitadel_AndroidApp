@@ -3,6 +3,10 @@ package lol.mycitadel.app.data.network
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+/* ══════════════════════════════════════════════════════════════════
+ * POSTS
+ * ════════════════════════════════════════════════════════════════ */
+
 @Serializable
 data class PostDto(
     val id: Int,
@@ -101,4 +105,92 @@ data class UploadMediaResponse(
     val height: Int? = null,
     val name: String? = null,
     val message: String? = null,
+)
+
+
+/* ══════════════════════════════════════════════════════════════════
+ * REACTIONS
+ * ════════════════════════════════════════════════════════════════ */
+
+@Serializable
+data class ToggleReactionRequest(
+    @SerialName("target_type") val targetType: String,   // "post" | "comment"
+    @SerialName("target_id")   val targetId: Int,
+    val reaction: String,                                 // like|dislike|heart|angry
+)
+
+@Serializable
+data class ToggleReactionResponse(
+    val status: String,
+    val reaction: String? = null,      // null = reaction was removed
+    val count: Int = 0,
+    val message: String? = null,
+)
+
+
+/* ══════════════════════════════════════════════════════════════════
+ * COMMENTS
+ * ------------------------------------------------------------------
+ * The API nests author metadata under an `author` object rather than
+ * flattening it onto the comment. Field names inside `author` are
+ * snake_case (display_name, avatar_url, accent_color).
+ * ════════════════════════════════════════════════════════════════ */
+
+@Serializable
+data class CommentAuthorDto(
+    val id: Int,
+    val username: String,
+    @SerialName("display_name") val displayName: String? = null,
+    @SerialName("avatar_url")   val avatarUrl: String? = null,
+    @SerialName("accent_color") val accentColor: String? = null,
+)
+
+@Serializable
+data class CommentDto(
+    val id: Int,
+    @SerialName("post_id")   val postId: Int,
+    @SerialName("parent_id") val parentId: Int? = null,
+    val author: CommentAuthorDto,
+    val content: String = "",
+    @SerialName("created_at") val createdAt: String,
+    @SerialName("updated_at") val updatedAt: String? = null,
+    @SerialName("is_edited")  val isEdited: Boolean = false,
+    @SerialName("viewer_reaction")   val viewerReaction: String? = null,
+    @SerialName("viewer_can_delete") val viewerCanDelete: Boolean = false,
+)
+
+@Serializable
+data class CommentsListResponse(
+    val status: String,
+    val comments: List<CommentDto> = emptyList(),
+    val total: Int = 0,
+    val limit: Int = 50,
+    val offset: Int = 0,
+    @SerialName("has_more") val hasMore: Boolean = false,
+)
+
+@Serializable
+data class CreateCommentRequest(
+    @SerialName("post_id")   val postId: Int,
+    val content: String,
+    @SerialName("parent_id") val parentId: Int? = null,
+)
+
+@Serializable
+data class CreateCommentResponse(
+    val status: String,
+    @SerialName("comment_id") val commentId: Int,
+    @SerialName("parent_id")  val parentId: Int? = null,
+    @SerialName("is_reply")   val isReply: Boolean = false,
+    val message: String? = null,
+)
+
+@Serializable
+data class DeleteCommentRequest(val id: Int)
+
+@Serializable
+data class DeleteCommentResponse(
+    val status: String,
+    val message: String? = null,
+    @SerialName("reputation_change") val reputationChange: Int = 0,
 )

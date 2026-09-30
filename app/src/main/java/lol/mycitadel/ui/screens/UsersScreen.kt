@@ -51,6 +51,7 @@ private const val DEFAULT_WALLPAPER = "https://mycitadel.lol/img/users/default/w
 fun UsersScreen(
     currentUser: UserDto?,
     onOpenProfile: (Int) -> Unit,
+    onOpenChat: (Long) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: UsersViewModel = viewModel(factory = UsersViewModel.Factory),
 ) {
@@ -62,7 +63,7 @@ fun UsersScreen(
         when {
             state.loading && state.users.isEmpty() && state.self == null -> LoadingState()
             state.fatalError != null && state.users.isEmpty() -> ErrorState(state.fatalError!!, viewModel::refresh)
-            else -> DirectoryContent(state, viewModel, onOpenProfile)
+            else -> DirectoryContent(state, viewModel, onOpenProfile, onOpenChat)
         }
 
         state.toast?.let { msg ->
@@ -106,6 +107,7 @@ private fun DirectoryContent(
     state: UsersState,
     vm: UsersViewModel,
     onOpenProfile: (Int) -> Unit,
+    onOpenChat: (Long) -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {
 
@@ -188,13 +190,15 @@ private fun DirectoryContent(
             items(state.users, key = { it.id }) { user ->
                 CitizenCard(
                     user = user,
+                    isOpeningChat = user.id in state.openingChatFor,
                     onOpenProfile = { onOpenProfile(user.id) },
+                    onOpenChat    = { vm.startConversation(user.id, onOpenChat) },
                     onRequest = { vm.requestConnection(user) },
-                    onAccept = { vm.acceptConnection(user) },
-                    onCancel = { vm.cancelRequest(user) },
-                    onDeny = { vm.denyRequest(user) },
-                    onSever = { vm.severConnection(user) },
-                    onHide = { vm.hideUser(user) },
+                    onAccept  = { vm.acceptConnection(user) },
+                    onCancel  = { vm.cancelRequest(user) },
+                    onDeny    = { vm.denyRequest(user) },
+                    onSever   = { vm.severConnection(user) },
+                    onHide    = { vm.hideUser(user) },
                 )
             }
 
@@ -251,7 +255,9 @@ private fun SelfCard(user: UserDto, onView: () -> Unit) {
 @Composable
 private fun CitizenCard(
     user: UserSummary,
+    isOpeningChat: Boolean,
     onOpenProfile: () -> Unit,
+    onOpenChat: () -> Unit,
     onRequest: () -> Unit,
     onAccept: () -> Unit,
     onCancel: () -> Unit,
@@ -261,28 +267,37 @@ private fun CitizenCard(
 ) {
     CitizenCardBase(
         displayName = user.displayName ?: user.username,
-        username    = user.username,
-        tagline     = user.tagline,
-        avatarUrl   = user.avatarUrl ?: DEFAULT_AVATAR,
-        bannerUrl   = user.bannerUrl ?: DEFAULT_BANNER,
+        username = user.username,
+        tagline = user.tagline,
+        avatarUrl = user.avatarUrl ?: DEFAULT_AVATAR,
+        bannerUrl = user.bannerUrl ?: DEFAULT_BANNER,
         wallpaperUrl = user.wallpaperUrl ?: DEFAULT_WALLPAPER,
-        reputation  = user.reputation,
-        badgeCount  = user.badgeCount,
-        isSelf      = false,
+        reputation = user.reputation,
+        badgeCount = user.badgeCount,
+        isSelf = false,
     ) {
         when (user.connectionState) {
             "connected" -> {
-                CitizenActionButton("View Profile", CitizenAction.Cyan, onOpenProfile)
+                CitizenActionButton("View", CitizenAction.Cyan, onOpenProfile)
+                CitizenActionButton(
+                    label = if (isOpeningChat) "…" else "Message",
+                    style = CitizenAction.Gold,
+                    onClick = onOpenChat,
+                    enabled = !isOpeningChat,
+                )
                 CitizenActionButton("Sever", CitizenAction.Danger, onSever)
             }
+
             "pending_out" -> {
                 CitizenActionButton("Request Sent", CitizenAction.Muted, {})
                 CitizenActionButton("Cancel", CitizenAction.Ghost, onCancel)
             }
+
             "pending_in" -> {
                 CitizenActionButton("Accept", CitizenAction.Cyan, onAccept)
                 CitizenActionButton("Deny", CitizenAction.Danger, onDeny)
             }
+
             else -> {
                 CitizenActionButton("Request Connection", CitizenAction.Cyan, onRequest)
                 CitizenActionButton("Hide Me", CitizenAction.Ghost, onHide)

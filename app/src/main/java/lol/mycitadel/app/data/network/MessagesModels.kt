@@ -99,7 +99,7 @@ data class StreamResponse(
 @Serializable
 data class MarkReadRequest(
     @SerialName("conversation_id") val conversationId: Long,
-    @SerialName("up_to_message_id") val upToMessageId: Long,
+    @SerialName("up_to_message_id") val upToMessageId: Long? = null,
 )
 
 @Serializable
