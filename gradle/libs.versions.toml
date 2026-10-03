@@ -19,6 +19,10 @@ retrofitKotlinx = "1.0.0"
 # ─── Security (encrypted cookie storage) ───────────────────────────
 securityCrypto = "1.1.0-alpha06"
 
+# ─── Firebase / Google Services ───────────────────────────────────
+googleServices = "4.4.2"
+firebaseBom = "33.9.0"
+
 [libraries]
 # ─── Existing ──────────────────────────────────────────────────────
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -51,8 +55,13 @@ coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
 # ─── Security ──────────────────────────────────────────────────────
 androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
 
+# ─── Firebase ──────────────────────────────────────────────────────
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
+
 [plugins]
 android-application    = { id = "com.android.application", version.ref = "agp" }
 kotlin-android         = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose         = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization   = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+google-services        = { id = "com.google.gms.google-services", version.ref = "googleServices" }

@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,7 +43,11 @@ import lol.mycitadel.app.ui.theme.Success
 import lol.mycitadel.app.ui.theme.TextDim
 
 @Composable
-fun AboutScreen(modifier: Modifier = Modifier) {
+fun AboutScreen(
+    modifier: Modifier = Modifier,
+    onNavigateToRegister: () -> Unit = {},
+    onNavigateToLogin: () -> Unit = {},
+) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -462,10 +467,19 @@ fun AboutScreen(modifier: Modifier = Modifier) {
 
                 CitadelButton(
                     text = "Enter the Citadel",
-                    onClick = { /* TODO: navigate to Register */ },
+                    onClick = onNavigateToRegister,
                     style = CitadelButtonStyle.Gold,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                TextButton(
+                    onClick = onNavigateToLogin,
+                ) {
+                    Text(
+                        text = "Already a Citizen? Log In",
+                        color = Cyan,
+                        fontSize = 13.sp,
+                    )
+                }
 
                 Spacer(Modifier.height(48.dp))
             }

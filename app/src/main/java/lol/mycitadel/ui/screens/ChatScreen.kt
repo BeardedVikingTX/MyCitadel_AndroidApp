@@ -46,7 +46,10 @@ fun ChatScreen(
     currentUser: UserDto?,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: ChatViewModel = viewModel(factory = ChatViewModel.factory(conversationId)),
+    viewModel: ChatViewModel = viewModel(
+        key = "chat_$conversationId",
+        factory = ChatViewModel.factory(conversationId),
+    ),
 ) {
     val state by viewModel.state.collectAsState()
 
@@ -92,15 +95,20 @@ private fun ChatContent(
     vm: ChatViewModel,
 ) {
     val listState = rememberLazyListState()
+    val imeBottom = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
 
-    // Auto-scroll to bottom when new messages arrive
-    LaunchedEffect(state.messages.size) {
+    // Auto-scroll to bottom when new messages arrive or soft keyboard opens
+    LaunchedEffect(state.messages.size, imeBottom) {
         if (state.messages.isNotEmpty()) {
             listState.animateScrollToItem(state.messages.lastIndex)
         }
     }
 
-    Column(Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .imePadding()
+    ) {
 
         // ── Header ─────────────────────────────────────────────
         Row(

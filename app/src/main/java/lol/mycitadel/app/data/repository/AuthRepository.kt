@@ -9,7 +9,7 @@ import lol.mycitadel.app.data.network.CitadelClient
 import lol.mycitadel.app.data.network.Login2faRequest
 import lol.mycitadel.app.data.network.LoginRequest
 import lol.mycitadel.app.data.network.RegisterRequest
-
+import lol.mycitadel.app.data.network.PasswordResetRequest
 
 class AuthRepository(
     private val api: CitadelApi,
@@ -180,6 +180,41 @@ class AuthRepository(
         )
     }
 
+    suspend fun requestPasswordReset(email: String): ResetRequestResult =
+        withContext(Dispatchers.IO) {
+
+            // CSRF not required for this endpoint per password_reset_request.php,
+            // but warming the token keeps the session coherent and costs nothing.
+            if (client.csrfToken.isNullOrBlank()) {
+                fetchCsrf()?.let { client.csrfToken = it }
+            }
+
+            val response = try {
+                api.requestPasswordReset(PasswordResetRequest(email = email.trim()))
+            } catch (e: Exception) {
+                return@withContext ResetRequestResult.Failure(
+                    "network_error",
+                    "Network error: ${e.message ?: "unknown"}"
+                )
+            }
+
+            if (response.isSuccessful) {
+                val body = response.body()
+                body?.csrfToken?.let { client.csrfToken = it }
+                if (body?.status == "ok") return@withContext ResetRequestResult.Success
+            }
+
+            val raw = response.errorBody()?.string().orEmpty()
+            val parsed = try { errorJson.decodeFromString<ApiError>(raw) } catch (_: Exception) { null }
+
+            if (parsed?.code == "csrf_invalid") client.csrfToken = null
+
+            ResetRequestResult.Failure(
+                code = parsed?.code ?: "http_${response.code()}",
+                message = parsed?.message ?: "Request failed (${response.code()})."
+            )
+        }
+
     /* ── CSRF ─────────────────────────────────────────────────── */
 
     private suspend fun fetchCsrf(): String? = try {
@@ -206,5 +241,10 @@ class AuthRepository(
         } catch (_: Exception) {
             null
         }
+    }
+
+    sealed interface ResetRequestResult {
+        data object Success : ResetRequestResult
+        data class Failure(val code: String, val message: String) : ResetRequestResult
     }
 }

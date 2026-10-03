@@ -63,7 +63,7 @@ class ChatViewModel(
         viewModelScope.launch {
             when (val r = repo.loadThread(conversationId)) {
                 is MessagesRepository.Result.Success -> {
-                    val msgs = r.data.messages
+                    val msgs = r.data.messages.filter { it.conversationId == conversationId }
                     val lastId = msgs.lastOrNull()?.id ?: 0L
                     lastSeenId = maxOf(lastSeenId, lastId)
                     _state.update {
@@ -99,7 +99,9 @@ class ChatViewModel(
                             lastSeenId = maxOf(lastSeenId, result.data.lastId)
                             _state.update { st ->
                                 val existingIds = st.messages.map { it.id }.toSet()
-                                val filtered = newMsgs.filter { it.id !in existingIds }
+                                val filtered = newMsgs.filter {
+                                    it.conversationId == conversationId && it.id !in existingIds
+                                }
                                 if (filtered.isEmpty()) st
                                 else st.copy(messages = st.messages + filtered)
                             }

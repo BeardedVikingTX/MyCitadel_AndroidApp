@@ -10,8 +10,16 @@ import lol.mycitadel.app.data.repository.FeedRepository
 import lol.mycitadel.app.data.repository.UsersRepository
 import lol.mycitadel.app.data.repository.MessagesRepository
 import lol.mycitadel.app.data.repository.NotificationsRepository
+import lol.mycitadel.app.data.repository.PremiumRepository
+import lol.mycitadel.app.service.PushNotificationManager
 
 class MyCitadelApp : Application() {
+
+    override fun onCreate() {
+        super.onCreate()
+        PushNotificationManager.createNotificationChannel(this)
+        PushNotificationManager.scheduleBackgroundWork(this)
+    }
 
     val cookieJar: PersistentCookieJar by lazy { PersistentCookieJar(this) }
     val apiClient: CitadelClient       by lazy { CitadelClient(cookieJar) }
@@ -42,4 +50,7 @@ class MyCitadelApp : Application() {
         NotificationsRepository(apiClient.api)
     }
 
+    val premiumRepository: PremiumRepository by lazy {
+        PremiumRepository(apiClient.api, apiClient)
+    }
 }

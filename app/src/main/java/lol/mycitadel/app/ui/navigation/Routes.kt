@@ -30,4 +30,7 @@ object Routes {
 
     const val POST_VIEW = "post/{postId}"
     fun postView(postId: Int): String = "post/$postId"
+
+    const val FORGOT_PASSWORD = "forgot-password"
+    const val PREMIUM         = "premium"
 }

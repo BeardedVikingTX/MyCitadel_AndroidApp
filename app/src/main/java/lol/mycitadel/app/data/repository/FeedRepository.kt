@@ -58,9 +58,10 @@ class FeedRepository(
         scope: String = "all",
         cursor: String? = null,
         limit: Int = 20,
+        postId: Int? = null,
     ): FetchResult = withContext(Dispatchers.IO) {
         try {
-            val response = api.feed(scope = scope, limit = limit, cursor = cursor)
+            val response = api.feed(scope = scope, limit = limit, cursor = cursor, postId = postId)
 
             if (!response.isSuccessful) {
                 val raw = response.errorBody()?.string().orEmpty()

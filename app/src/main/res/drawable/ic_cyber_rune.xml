@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- Mannaz Rune (ᛗ) -->
+    <path
+        android:pathData="M7,4 L7,20 M17,4 L17,20 M7,4 L17,16 M17,4 L7,16"
+        android:strokeWidth="2"
+        android:strokeColor="#00F0FF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

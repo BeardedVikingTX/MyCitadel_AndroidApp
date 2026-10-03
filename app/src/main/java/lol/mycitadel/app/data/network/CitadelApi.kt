@@ -66,6 +66,7 @@ interface CitadelApi {
         @Query("scope") scope: String = "all",
         @Query("limit") limit: Int = 20,
         @Query("cursor") cursor: String? = null,
+        @Query("post_id") postId: Int? = null,
     ): Response<FeedResponse>
 
     @POST("posts/create.php")
@@ -172,4 +173,29 @@ interface CitadelApi {
     suspend fun deleteNotification(
         @Body body: DeleteNotificationRequest,
     ): Response<DeleteNotificationResponse>
+
+    @POST("notifications/register_device.php")
+    suspend fun registerDeviceToken(
+        @Body body: RegisterDeviceTokenRequest,
+    ): Response<BasicResponse>
+
+    @POST("verify/password_reset_request.php")
+    suspend fun requestPasswordReset(
+        @Body body: PasswordResetRequest,
+    ): Response<PasswordResetResponse>
+
+    /* ── Premium / Stripe ─────────────────────────────────────────── */
+
+    @POST("premium/checkout.php")
+    suspend fun premiumCheckout(
+        @Body body: EmptyRequest = EmptyRequest(),
+    ): Response<CheckoutResponse>
+
+    @POST("premium/portal.php")
+    suspend fun premiumPortal(
+        @Body body: EmptyRequest = EmptyRequest(),
+    ): Response<PortalResponse>
+
+    @GET("premium/status.php")
+    suspend fun premiumStatus(): Response<PremiumStatusResponse>
 }

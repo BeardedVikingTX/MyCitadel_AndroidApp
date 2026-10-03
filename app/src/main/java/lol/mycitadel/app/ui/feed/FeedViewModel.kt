@@ -88,6 +88,7 @@ data class FeedState(
     val hasMore: Boolean = false,
     val nextCursor: String? = null,
     val loadingMore: Boolean = false,
+    val focusedPostId: Int? = null,
     val composer: ComposerState = ComposerState(),
     val commentsByPost: Map<Int, PostCommentsState> = emptyMap(),
     val fatalError: String? = null,
@@ -95,9 +96,12 @@ data class FeedState(
     val toastIsError: Boolean = false,
 )
 
-class FeedViewModel(private val repo: FeedRepository) : ViewModel() {
+class FeedViewModel(
+    private val repo: FeedRepository,
+    initialFocusedPostId: Int? = null,
+) : ViewModel() {
 
-    private val _state = MutableStateFlow(FeedState())
+    private val _state = MutableStateFlow(FeedState(focusedPostId = initialFocusedPostId))
     val state: StateFlow<FeedState> = _state.asStateFlow()
 
     init { loadFeed(reset = true) }
@@ -117,6 +121,7 @@ class FeedViewModel(private val repo: FeedRepository) : ViewModel() {
             val result = repo.fetchFeed(
                 scope = snapshot.scope.key,
                 cursor = if (reset) null else snapshot.nextCursor,
+                postId = if (reset) snapshot.focusedPostId else null,
             )
 
             when (result) {
@@ -131,6 +136,12 @@ class FeedViewModel(private val repo: FeedRepository) : ViewModel() {
                             nextCursor = result.nextCursor,
                             fatalError = null,
                         )
+                    }
+
+                    snapshot.focusedPostId?.let { focusedId ->
+                        if (result.posts.any { it.id == focusedId }) {
+                            toggleComments(focusedId)
+                        }
                     }
                 }
                 is FeedRepository.FetchResult.Failure -> {
@@ -502,6 +513,11 @@ class FeedViewModel(private val repo: FeedRepository) : ViewModel() {
         }
     }
 
+    fun clearFocusedPost() {
+        _state.update { it.copy(focusedPostId = null) }
+        loadFeed(reset = true)
+    }
+
     /* ── Toast ───────────────────────────────────────────────── */
 
     fun clearToast() {
@@ -513,10 +529,12 @@ class FeedViewModel(private val repo: FeedRepository) : ViewModel() {
     }
 
     companion object {
-        val Factory: ViewModelProvider.Factory = viewModelFactory {
+        val Factory: ViewModelProvider.Factory = factory(null)
+
+        fun factory(focusedPostId: Int? = null): ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = this[APPLICATION_KEY] as MyCitadelApp
-                FeedViewModel(app.feedRepository)
+                FeedViewModel(app.feedRepository, focusedPostId)
             }
         }
     }

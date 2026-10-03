@@ -45,6 +45,10 @@ class LoginViewModel(private val repo: AuthRepository) : ViewModel() {
         _state.update { it.copy(twoFaCode = v, errorMessage = null) }
     }
 
+    fun clearError() {
+        _state.update { it.copy(errorMessage = null) }
+    }
+
     /** Return to password step — call when 2FA pending state expires or user asks. */
     fun backToPassword() {
         _state.update {

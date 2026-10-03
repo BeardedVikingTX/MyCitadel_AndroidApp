@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -69,10 +70,21 @@ private const val SECTION_PADDING = 24
  *   07 How It Works
  *   08 Promises (5 items)
  *   09 Final CTA
+ *
+ * COPY LEGAL NOTES (mirror of the web):
+ *   • We claim encryption AT REST, never E2EE. The server holds master.key.
+ *   • We claim we don't sell/trade/train-on data — a policy, not a physics.
+ *   • We describe our license as source-available, not open source.
+ *   • We describe cookies we actually set, in the plural.
  * ======================================================================== */
 
 @Composable
-fun HomeScreen(modifier: Modifier = Modifier) {
+fun HomeScreen(
+    modifier: Modifier = Modifier,
+    onNavigateToRegister: () -> Unit = {},
+    onNavigateToLogin: () -> Unit = {},
+    onNavigateToPremium: () -> Unit = {},
+) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
@@ -91,7 +103,14 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
 
-        item { HeroSection(onSeeTiers = scrollToTiers, onSeeEvidence = scrollToEvidence) }
+        item {
+            HeroSection(
+                onSeeTiers = scrollToTiers,
+                onSeeEvidence = scrollToEvidence,
+                onEnterCitadel = onNavigateToRegister,
+                onLoginClick = onNavigateToLogin,
+            )
+        }
         item { EvidenceSection() }
         item { MechanismSection() }
         item { ArsenalSection() }
@@ -99,7 +118,12 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         item { ShieldPreviewSection() }
         item { HowItWorksSection() }
         item { PromisesSection() }
-        item { FinalCtaSection() }
+        item {
+            FinalCtaSection(
+                onEnterCitadel = onNavigateToRegister,
+                onLoginClick = onNavigateToLogin,
+            )
+        }
     }
 }
 
@@ -112,6 +136,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
 private fun HeroSection(
     onSeeTiers: () -> Unit,
     onSeeEvidence: () -> Unit,
+    onEnterCitadel: () -> Unit = {},
+    onLoginClick: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier
@@ -141,10 +167,11 @@ private fun HeroSection(
 
         Text(
             text = "Every social platform you use sells your attention. " +
-                    "We built the one that cannot — because we never see " +
-                    "your data in the first place. Encrypted before it " +
-                    "leaves your device. No trackers. No ad networks. " +
-                    "No compromise.",
+                    "We built one that doesn't. Your posts, your messages, " +
+                    "your personal information — encrypted at rest, sealed " +
+                    "behind keys derived just for you, and never sold, " +
+                    "shared, or fed to an AI trainer. No trackers. No ad " +
+                    "networks. No compromise.",
             style = MaterialTheme.typography.bodyLarge,
             color = TextDim,
             textAlign = TextAlign.Center,
@@ -161,16 +188,27 @@ private fun HeroSection(
         ) {
             CitadelButton(
                 text = "Enter the Citadel",
-                onClick = { /* TODO: navigate to /register */ },
+                onClick = onEnterCitadel,
                 style = CitadelButtonStyle.Gold,
                 modifier = Modifier.fillMaxWidth(),
             )
-            CitadelButton(
-                text = "See Free vs Premium",
-                onClick = onSeeTiers,
-                style = CitadelButtonStyle.Cyan,
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-            )
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                CitadelButton(
+                    text = "Log In",
+                    onClick = onLoginClick,
+                    style = CitadelButtonStyle.Cyan,
+                    modifier = Modifier.weight(1f),
+                )
+                CitadelButton(
+                    text = "See Tiers",
+                    onClick = onSeeTiers,
+                    style = CitadelButtonStyle.Cyan,
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
 
         Spacer(Modifier.height(36.dp))
@@ -181,7 +219,7 @@ private fun HeroSection(
         Spacer(Modifier.height(20.dp))
 
         Text(
-            text = "Free forever. Premium at $10/month if you want higher limits.",
+            text = "Free forever. Premium at \$10/month if you want higher limits.",
             style = MaterialTheme.typography.bodySmall,
             color = TextFaint,
             textAlign = TextAlign.Center,
@@ -196,7 +234,7 @@ private fun HeroStatsStrip() {
         "0"      to "third-party trackers",
         "0"      to "ad networks",
         "0"      to "data sold",
-        "100%"   to "open source",
+        "0"      to "AI training",
     )
 
     Column(
@@ -298,14 +336,14 @@ private fun EvidenceSection() {
                     "https://gdprlocal.com/metas-e1-2-billion-gdpr-fine-why-it-still-matters-in-2025/",
                 ),
             ),
-            cost = "Their Premium Fee: $11.99 – $14.99 / month",
+            cost = "Their Premium Fee: \$11.99 – \$14.99 / month",
         )
 
         Spacer(Modifier.height(16.dp))
 
         EvidenceCard(
             title = "TikTok",
-            statNumber = "$400M",
+            statNumber = "\$400M",
             statLabel = "Settlement for Children's Privacy Violations",
             sources = listOf(
                 EvidenceSource(
@@ -324,7 +362,7 @@ private fun EvidenceSection() {
 
         EvidenceCard(
             title = "X (formerly Twitter)",
-            statNumber = "$150M",
+            statNumber = "\$150M",
             statLabel = "FTC Fine for Deceptive Data Use",
             sources = listOf(
                 EvidenceSource(
@@ -389,7 +427,7 @@ private fun MechanismSection() {
             title = "The Mechanism",
             lede = "This is not marketing. This is how the platform is " +
                     "actually built. Every claim below has a corresponding " +
-                    "line of code you can audit on GitHub.",
+                    "line of code published for audit.",
         )
 
         Spacer(Modifier.height(24.dp))
@@ -399,31 +437,36 @@ private fun MechanismSection() {
             title = "Encrypted at Rest",
             body = "Email, phone, real name, address — every piece of " +
                     "personal data is envelope-encrypted with a key derived " +
-                    "just for you. A stolen database yields nothing but ciphertext.",
+                    "just for you. Posts, comments, and messages are " +
+                    "encrypted under the same architecture. A stolen " +
+                    "database yields ciphertext, not a dossier.",
         )
         Spacer(Modifier.height(12.dp))
         PillarCard(
             icon = "🛡️",
-            title = "Argon2id Auth",
+            title = "Argon2id Authentication",
             body = "256 MiB of memory cost per password hash. Even with " +
-                    "our entire database in hand, a password cannot be " +
-                    "recovered. Sessions are fingerprinted and rotate on " +
-                    "every privilege change.",
+                    "our entire database in hand, offline cracking is " +
+                    "economically infeasible. Sessions are fingerprinted, " +
+                    "HMAC-verified, and rotated on every privilege change.",
         )
         Spacer(Modifier.height(12.dp))
         PillarCard(
             icon = "⚔️",
             title = "Zero Tracking",
             body = "No analytics scripts. No third-party cookies. " +
-                    "No fingerprinting. The only cookie we set is the one " +
-                    "that keeps you logged in — and it never leaves our domain.",
+                    "No fingerprinting. The only cookies we set are the " +
+                    "ones that keep you logged in and protect your " +
+                    "session — and they never leave our domain.",
         )
         Spacer(Modifier.height(12.dp))
         PillarCard(
             icon = "👁️",
-            title = "Open Source",
-            body = "Every line of code is public on GitHub. Audit it " +
-                    "yourself, or hire someone to. Security through " +
+            title = "Source-Available",
+            body = "Every line of our code is published on GitHub for " +
+                    "inspection. Read it. Test it. Hire someone to break it. " +
+                    "Our license permits auditing and security research — " +
+                    "not cloning and relaunching. Security through " +
                     "architecture, not promises.",
         )
 
@@ -434,7 +477,7 @@ private fun MechanismSection() {
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             CitadelButton(
-                text = "View Our Source Code",
+                text = "Audit Our Source Code",
                 onClick = { /* TODO: open GitHub */ },
                 style = CitadelButtonStyle.Cyan,
                 modifier = Modifier.fillMaxWidth(),
@@ -451,7 +494,7 @@ private fun MechanismSection() {
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * 04 — ARSENAL (new)
+ * 04 — ARSENAL
  * ======================================================================== */
 
 @Composable
@@ -474,8 +517,9 @@ private fun ArsenalSection() {
                     "just a binary thumb. Reaction counts on every post."),
         Triple("✉", "Encrypted Messaging",
             "Direct conversations with your connections. Attach files. " +
-                    "Every message encrypted at rest. Sever a connection and " +
-                    "the whole conversation is destroyed — not archived, destroyed."),
+                    "Every message encrypted at rest under a key derived for " +
+                    "that conversation. Delete a message and it's gone for " +
+                    "both parties — no recovery, no archive, no lingering copy."),
         Triple("🔔", "Real-Time Notifications",
             "Web Push to your browser. Know when someone connects, comments, " +
                     "or reacts — without a tab open. No tracking pixel hiding " +
@@ -597,7 +641,8 @@ private fun TiersSection() {
             lede = "MyCitadel is free forever. Premium is for Citizens who " +
                     "want more room, more reach, and more tools — and it is " +
                     "the only thing keeping this platform alive. No ads. No " +
-                    "data sale. Just \$10/month if you choose it.",
+                    "data sales. No AI training. Just \$10/month if you " +
+                    "choose it.",
         )
 
         Spacer(Modifier.height(24.dp))
@@ -606,7 +651,7 @@ private fun TiersSection() {
         TierPricingCard(
             badge = "FREE",
             name = "Forever",
-            price = "$0",
+            price = "\$0",
             priceUnit = "/month",
             tagline = "The full platform. Free is not a demo — it is " +
                     "the Citadel, and it always will be.",
@@ -628,7 +673,7 @@ private fun TiersSection() {
         TierPricingCard(
             badge = "PREMIUM",
             name = "Citadel+",
-            price = "$10",
+            price = "\$10",
             priceUnit = "/month",
             tagline = "Higher limits, all four reactions, group messaging " +
                     "with admin controls, and a badge that announces itself " +
@@ -1168,13 +1213,15 @@ private fun PromisesSection() {
             title = "We do not sell your data. Ever.",
             body = "We have no business model that depends on knowing " +
                     "anything about you. Premium subscriptions are how this " +
-                    "platform stays alive.",
+                    "platform stays alive — not advertising, not data " +
+                    "brokerage, not AI training contracts.",
         )
         GuaranteeItem(
             title = "You can leave at any time.",
-            body = "Account deletion destroys your posts, comments, " +
-                    "reactions, and connections — permanently. No soft-delete " +
-                    "limbo, no data retention games. When we say delete, we mean it.",
+            body = "Account deletion removes your posts, comments, " +
+                    "reactions, and connections from the platform — and " +
+                    "our systems are built to not keep what you have asked " +
+                    "us to remove.",
         )
         GuaranteeItem(
             title = "Free is not a demo.",
@@ -1184,13 +1231,14 @@ private fun PromisesSection() {
         )
         GuaranteeItem(
             title = "We pay for bugs.",
-            body = "Once we launch, we will run a HackerOne bug bounty " +
-                    "program. Security researchers are invited — and rewarded.",
+            body = "We run a HackerOne bug bounty program. Security " +
+                    "researchers are invited — and rewarded.",
         )
         GuaranteeItem(
             title = "Security you can verify.",
-            body = "Our code is public on GitHub. Our threat model is " +
-                    "documented. Our limits are published. Audit us.",
+            body = "Our source code is published for audit. Our threat " +
+                    "model is documented. Our limits are published. " +
+                    "Verify us.",
         )
     }
 }
@@ -1201,7 +1249,10 @@ private fun PromisesSection() {
  * ======================================================================== */
 
 @Composable
-private fun FinalCtaSection() {
+private fun FinalCtaSection(
+    onEnterCitadel: () -> Unit = {},
+    onLoginClick: () -> Unit = {},
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -1233,14 +1284,24 @@ private fun FinalCtaSection() {
 
         Column(
             modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             CitadelButton(
                 text = "Enter the Citadel",
-                onClick = { /* TODO: navigate to /register */ },
+                onClick = onEnterCitadel,
                 style = CitadelButtonStyle.Gold,
                 modifier = Modifier.fillMaxWidth(),
             )
+            TextButton(
+                onClick = onLoginClick,
+            ) {
+                Text(
+                    text = "Already a Citizen? Log In",
+                    color = Cyan,
+                    fontSize = 13.sp,
+                )
+            }
         }
 
         Spacer(Modifier.height(48.dp))

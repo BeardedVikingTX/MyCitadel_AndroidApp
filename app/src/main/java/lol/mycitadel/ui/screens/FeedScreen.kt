@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -115,8 +116,12 @@ private val REACTION_LABELS = mapOf(
 @Composable
 fun FeedScreen(
     currentUser: UserDto?,
+    focusedPostId: Int? = null,
     modifier: Modifier = Modifier,
-    viewModel: FeedViewModel = viewModel(factory = FeedViewModel.Factory),
+    viewModel: FeedViewModel = viewModel(
+        key = if (focusedPostId != null) "feed_post_$focusedPostId" else "feed_main",
+        factory = FeedViewModel.factory(focusedPostId),
+    ),
 ) {
     val state by viewModel.state.collectAsState()
 
@@ -206,58 +211,97 @@ private fun FeedMain(
 ) {
     val isPremium = currentUser?.premium == true
 
-    Column(modifier = Modifier.fillMaxSize()) {
-
-        ScopeRow(
-            current = state.scope,
-            onSelect = vm::changeScope,
-        )
-
-        Composer(
-            user = currentUser,
-            composer = state.composer,
-            isPremium = isPremium,
-            onTextChange = vm::onComposerText,
-            onVisibilityChange = vm::onComposerVisibility,
-            onPickAttachments = { uri -> vm.addAttachment(uri, isPremium) },
-            onRemoveAttachment = vm::removeAttachment,
-            onSubmit = { vm.submitPost(currentUser) },
-        )
-
-        Box(modifier = Modifier.weight(1f)) {
-            if (state.posts.isEmpty()) {
-                EmptyFeed()
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 24.dp),
-                    verticalArrangement = Arrangement.spacedBy(0.dp),
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .imePadding(),
+        contentPadding = PaddingValues(bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp),
+    ) {
+        if (state.focusedPostId != null) {
+            item(key = "focused_post_banner") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Gold.copy(alpha = 0.12f))
+                        .border(1.dp, Gold.copy(alpha = 0.4f))
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    items(
-                        items = state.posts,
-                        key = { it.id },
-                    ) { post ->
-                        PostCard(
-                            post = post,
-                            currentUser = currentUser,
-                            commentsState = state.commentsByPost[post.id] ?: PostCommentsState(),
-                            onEdit = { content, vis -> vm.updatePost(post.id, content, vis) },
-                            onDelete = { vm.deletePost(post.id) },
-                            onToggleReaction = { reaction -> vm.toggleReaction(post.id, reaction) },
-                            onToggleComments = { vm.toggleComments(post.id) },
-                            onCommentDraftChange = { text -> vm.onCommentDraftChange(post.id, text) },
-                            onSubmitComment = { vm.submitComment(post.id, currentUser) },
+                    Column {
+                        Text(
+                            text = "VIEWING SPECIFIC POST",
+                            color = GoldBright,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.5.sp,
+                        )
+                        Text(
+                            text = "Showing post #${state.focusedPostId} and comments",
+                            color = TextDim,
+                            fontSize = 11.sp,
                         )
                     }
+                    CitadelButton(
+                        text = "View All",
+                        onClick = vm::clearFocusedPost,
+                        style = CitadelButtonStyle.Cyan,
+                    )
+                }
+            }
+        }
 
-                    if (state.hasMore) {
-                        item {
-                            LoadMoreRow(
-                                loading = state.loadingMore,
-                                onClick = { vm.loadFeed(reset = false) },
-                            )
-                        }
-                    }
+        item(key = "scope_row") {
+            ScopeRow(
+                current = state.scope,
+                onSelect = vm::changeScope,
+            )
+        }
+
+        if (state.focusedPostId == null) {
+            item(key = "composer") {
+                Composer(
+                    user = currentUser,
+                    composer = state.composer,
+                    isPremium = isPremium,
+                    onTextChange = vm::onComposerText,
+                    onVisibilityChange = vm::onComposerVisibility,
+                    onPickAttachments = { uri -> vm.addAttachment(uri, isPremium) },
+                    onRemoveAttachment = vm::removeAttachment,
+                    onSubmit = { vm.submitPost(currentUser) },
+                )
+            }
+        }
+
+        if (state.posts.isEmpty()) {
+            item(key = "empty_feed") {
+                EmptyFeed()
+            }
+        } else {
+            items(
+                items = state.posts,
+                key = { it.id },
+            ) { post ->
+                PostCard(
+                    post = post,
+                    currentUser = currentUser,
+                    commentsState = state.commentsByPost[post.id] ?: PostCommentsState(),
+                    onEdit = { content, vis -> vm.updatePost(post.id, content, vis) },
+                    onDelete = { vm.deletePost(post.id) },
+                    onToggleReaction = { reaction -> vm.toggleReaction(post.id, reaction) },
+                    onToggleComments = { vm.toggleComments(post.id) },
+                    onCommentDraftChange = { text -> vm.onCommentDraftChange(post.id, text) },
+                    onSubmitComment = { vm.submitComment(post.id, currentUser) },
+                )
+            }
+
+            if (state.hasMore) {
+                item(key = "load_more") {
+                    LoadMoreRow(
+                        loading = state.loadingMore,
+                        onClick = { vm.loadFeed(reset = false) },
+                    )
                 }
             }
         }

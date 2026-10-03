@@ -8,6 +8,7 @@ import lol.mycitadel.app.data.network.CitadelApi
 import lol.mycitadel.app.data.network.DeleteNotificationRequest
 import lol.mycitadel.app.data.network.MarkNotificationReadRequest
 import lol.mycitadel.app.data.network.NotificationDto
+import lol.mycitadel.app.data.network.RegisterDeviceTokenRequest
 import java.io.IOException
 class NotificationsRepository(private val api: CitadelApi) {
 
@@ -90,6 +91,20 @@ class NotificationsRepository(private val api: CitadelApi) {
             }
         } catch (e: IOException) {
             ActionResult.Failure("network_error", "Network error: ${e.message ?: "unknown"}")
+        }
+    }
+
+    suspend fun registerDeviceToken(token: String): ActionResult = withContext(Dispatchers.IO) {
+        try {
+            val res = api.registerDeviceToken(RegisterDeviceTokenRequest(token = token))
+            if (res.isSuccessful) {
+                ActionResult.Success
+            } else {
+                val raw = res.errorBody()?.string().orEmpty()
+                ActionResult.Failure(parseCode(res.code(), raw), parseMessage(res.code(), raw))
+            }
+        } catch (e: Exception) {
+            ActionResult.Failure("network_error", e.message ?: "unknown")
         }
     }
 

@@ -2,6 +2,7 @@ package lol.mycitadel.app.data.network
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import okhttp3.Cookie
@@ -14,28 +15,22 @@ import okhttp3.HttpUrl
  */
 class PersistentCookieJar(context: Context) : CookieJar {
 
-    private val masterKey = MasterKey.Builder(context)
-        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-        .build()
-
-    private val prefs: SharedPreferences = EncryptedSharedPreferences.create(
-        context,
-        PREFS_NAME,
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
+    private val prefs: SharedPreferences = createEncryptedSharedPreferences(context)
 
     private val memory: MutableMap<String, MutableList<Cookie>> = mutableMapOf()
 
     init {
-        prefs.all.forEach { (key, value) ->
-            if (value is String && key.startsWith(KEY_PREFIX)) {
-                decodeCookie(value)?.let { cookie ->
-                    val host = key.removePrefix(KEY_PREFIX).substringBefore("::")
-                    memory.getOrPut(host) { mutableListOf() }.add(cookie)
+        try {
+            prefs.all.forEach { (key, value) ->
+                if (value is String && key.startsWith(KEY_PREFIX)) {
+                    decodeCookie(value)?.let { cookie ->
+                        val host = key.removePrefix(KEY_PREFIX).substringBefore("::")
+                        memory.getOrPut(host) { mutableListOf() }.add(cookie)
+                    }
                 }
             }
+        } catch (e: Exception) {
+            Log.e("PersistentCookieJar", "Failed to load cached cookies from prefs", e)
         }
     }
 
@@ -48,13 +43,21 @@ class PersistentCookieJar(context: Context) : CookieJar {
             list.removeAll { it.name == incoming.name }
             if (incoming.expiresAt > System.currentTimeMillis()) {
                 list.add(incoming)
-                prefs.edit()
-                    .putString(KEY_PREFIX + host + "::" + incoming.name, encodeCookie(incoming))
-                    .apply()
+                try {
+                    prefs.edit()
+                        .putString(KEY_PREFIX + host + "::" + incoming.name, encodeCookie(incoming))
+                        .apply()
+                } catch (e: Exception) {
+                    Log.e("PersistentCookieJar", "Error saving cookie", e)
+                }
             } else {
-                prefs.edit()
-                    .remove(KEY_PREFIX + host + "::" + incoming.name)
-                    .apply()
+                try {
+                    prefs.edit()
+                        .remove(KEY_PREFIX + host + "::" + incoming.name)
+                        .apply()
+                } catch (e: Exception) {
+                    Log.e("PersistentCookieJar", "Error removing cookie", e)
+                }
             }
         }
     }
@@ -68,9 +71,13 @@ class PersistentCookieJar(context: Context) : CookieJar {
     @Synchronized
     fun clear() {
         memory.clear()
-        val editor = prefs.edit()
-        prefs.all.keys.filter { it.startsWith(KEY_PREFIX) }.forEach { editor.remove(it) }
-        editor.apply()
+        try {
+            val editor = prefs.edit()
+            prefs.all.keys.filter { it.startsWith(KEY_PREFIX) }.forEach { editor.remove(it) }
+            editor.apply()
+        } catch (e: Exception) {
+            Log.e("PersistentCookieJar", "Error clearing cookies", e)
+        }
     }
 
     private fun encodeCookie(c: Cookie): String = listOf(
@@ -102,5 +109,39 @@ class PersistentCookieJar(context: Context) : CookieJar {
     private companion object {
         const val PREFS_NAME = "citadel_session_cookies"
         const val KEY_PREFIX = "cookie::"
+
+        private fun createEncryptedSharedPreferences(context: Context): SharedPreferences {
+            return try {
+                val masterKey = MasterKey.Builder(context)
+                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                    .build()
+
+                EncryptedSharedPreferences.create(
+                    context,
+                    PREFS_NAME,
+                    masterKey,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                )
+            } catch (e: Exception) {
+                Log.w("PersistentCookieJar", "EncryptedSharedPreferences corrupted. Resetting...", e)
+                context.deleteSharedPreferences(PREFS_NAME)
+                try {
+                    val masterKey = MasterKey.Builder(context)
+                        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                        .build()
+
+                    EncryptedSharedPreferences.create(
+                        context,
+                        PREFS_NAME,
+                        masterKey,
+                        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                    )
+                } catch (_: Exception) {
+                    context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                }
+            }
+        }
     }
 }

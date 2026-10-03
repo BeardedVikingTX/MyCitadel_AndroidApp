@@ -45,13 +45,14 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import lol.mycitadel.app.data.network.NotificationActorDto
 import lol.mycitadel.app.data.network.NotificationDto
 import lol.mycitadel.app.ui.components.CitadelButton
 import lol.mycitadel.app.ui.components.CitadelButtonStyle
 import lol.mycitadel.app.ui.components.RuneDivider
 import lol.mycitadel.app.ui.notifications.NotifTab
-import lol.mycitadel.app.ui.notifications.NotificationsState
 import lol.mycitadel.app.ui.notifications.NotificationsViewModel
 import lol.mycitadel.app.ui.theme.Blood
 import lol.mycitadel.app.ui.theme.Cyan
@@ -65,6 +66,10 @@ import lol.mycitadel.app.ui.theme.TextDim
 import lol.mycitadel.app.ui.theme.TextFaint
 import lol.mycitadel.app.ui.theme.TextPrimary
 import lol.mycitadel.app.ui.theme.Void
+import java.time.Duration
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 private const val DEFAULT_AVATAR = "https://mycitadel.lol/img/users/default/avatar.png"
 
@@ -72,6 +77,8 @@ private const val DEFAULT_AVATAR = "https://mycitadel.lol/img/users/default/avat
 fun NotificationsScreen(
     onOpenUser: (Int) -> Unit = {},
     onOpenPost: (Int) -> Unit = {},
+    onOpenChat: (Long) -> Unit = {},
+    onOpenMessages: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: NotificationsViewModel = viewModel(factory = NotificationsViewModel.Factory),
 ) {
@@ -118,6 +125,8 @@ fun NotificationsScreen(
                             },
                             onOpenUser = onOpenUser,
                             onOpenPost = onOpenPost,
+                            onOpenChat = onOpenChat,
+                            onOpenMessages = onOpenMessages,
                         )
                     }
                 }
@@ -240,34 +249,32 @@ private fun Toolbar(
  * NOTIFICATION ROW
  * ════════════════════════════════════════════════════════════════ */
 
-private data class NotifRender(
-    val icon: String,
-    val accent: Color,
-    val content: @Composable () -> Unit,
-    val actions: @Composable () -> Unit = {},
-)
-
 @Composable
 private fun NotificationRow(
     n: NotificationDto,
     busy: Boolean,
     onClick: () -> Unit,
-    onAccept: (actor: lol.mycitadel.app.data.network.NotificationActorDto) -> Unit,
-    onDeny: (actor: lol.mycitadel.app.data.network.NotificationActorDto) -> Unit,
+    onAccept: (actor: NotificationActorDto) -> Unit,
+    onDeny: (actor: NotificationActorDto) -> Unit,
     onOpenUser: (Int) -> Unit,
     onOpenPost: (Int) -> Unit,
+    onOpenChat: (Long) -> Unit,
+    onOpenMessages: () -> Unit,
 ) {
     val actor = n.actor
     val payload = extractPayload(n.payload)
-    val postId = payload?.get("post_id")?.jsonPrimitive?.intOrNull
+    val postId = extractInt(payload, "post_id", "postId")
+    val conversationId = extractLong(payload, "conversation_id", "conversationId", "chat_id", "thread_id")
+    val isMessage = n.type.contains("message") || conversationId != null
 
-    val accent = when (n.type) {
-        "connection_request"  -> Cyan
-        "connection_accepted" -> Success
-        "connection_denied"   -> TextFaint
-        else -> if (n.type.contains("reaction")) GoldBright
-        else if (n.type.contains("comment")) RuneBright
-        else CyanBright
+    val accent = when {
+        n.type == "connection_request"  -> Cyan
+        n.type == "connection_accepted" -> Success
+        n.type == "connection_denied"   -> TextFaint
+        n.type.contains("reaction")     -> GoldBright
+        n.type.contains("comment")      -> RuneBright
+        isMessage                       -> CyanBright
+        else                            -> CyanBright
     }
 
     val icon = when {
@@ -276,7 +283,8 @@ private fun NotificationRow(
         n.type == "connection_denied"   -> "✗"
         n.type.contains("comment")      -> "💬"
         n.type.contains("reaction")     -> reactionIcon(payload?.get("reaction")?.jsonPrimitive?.content)
-        else -> "◈"
+        isMessage                       -> "💬"
+        else                            -> "◈"
     }
 
     val borderColor = if (!n.read) Gold else accent
@@ -288,7 +296,15 @@ private fun NotificationRow(
             .clip(RoundedCornerShape(12.dp))
             .background(bg)
             .border(1.dp, borderColor.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
+            .clickable {
+                onClick()
+                when {
+                    conversationId != null -> onOpenChat(conversationId)
+                    isMessage -> onOpenMessages()
+                    postId != null -> onOpenPost(postId)
+                    actor != null -> onOpenUser(actor.id)
+                }
+            }
             .padding(12.dp),
     ) {
         // Left accent bar
@@ -362,7 +378,8 @@ private fun NotificationRow(
             // Actions
             val hasActions = n.type == "connection_request" ||
                     (n.type == "connection_accepted" && actor != null) ||
-                    postId != null
+                    postId != null ||
+                    isMessage
 
             if (hasActions) {
                 Spacer(Modifier.height(8.dp))
@@ -392,6 +409,20 @@ private fun NotificationRow(
                                 onClick = { onOpenUser(actor.id) },
                             )
                         }
+                        isMessage -> {
+                            NotifActionButton(
+                                label = "View Message",
+                                accent = Cyan,
+                                enabled = true,
+                                onClick = {
+                                    if (conversationId != null) {
+                                        onOpenChat(conversationId)
+                                    } else {
+                                        onOpenMessages()
+                                    }
+                                },
+                            )
+                        }
                         postId != null -> {
                             NotifActionButton(
                                 label = "View Post",
@@ -415,6 +446,7 @@ private fun NotificationMessage(n: NotificationDto, actorName: String) {
         n.type == "connection_denied"   -> "Your connection request was not accepted."
         n.type.contains("comment")      -> "$actorName commented on your post."
         n.type.contains("reaction")     -> "$actorName reacted to your post."
+        n.type.contains("message")      -> "$actorName sent you a message."
         else -> n.body ?: n.title ?: "New notification."
     }
     Text(
@@ -471,6 +503,28 @@ private fun extractPayload(el: JsonElement?): JsonObject? {
     }
 }
 
+private fun extractLong(obj: JsonObject?, vararg keys: String): Long? {
+    if (obj == null) return null
+    for (key in keys) {
+        val el = obj[key] ?: continue
+        val primitive = el as? JsonPrimitive ?: continue
+        primitive.longOrNull?.let { return it }
+        primitive.content.toLongOrNull()?.let { return it }
+    }
+    return null
+}
+
+private fun extractInt(obj: JsonObject?, vararg keys: String): Int? {
+    if (obj == null) return null
+    for (key in keys) {
+        val el = obj[key] ?: continue
+        val primitive = el as? JsonPrimitive ?: continue
+        primitive.intOrNull?.let { return it }
+        primitive.content.toIntOrNull()?.let { return it }
+    }
+    return null
+}
+
 private fun reactionIcon(reaction: String?): String = when (reaction) {
     "like"    -> "👍"
     "heart"   -> "❤"
@@ -482,15 +536,15 @@ private fun reactionIcon(reaction: String?): String = when (reaction) {
 private fun fmtRelTime(iso: String?): String {
     if (iso.isNullOrBlank()) return "—"
     return try {
-        val instant = java.time.Instant.parse(iso)
-        val diff = java.time.Duration.between(instant, java.time.Instant.now()).seconds
+        val instant = Instant.parse(iso)
+        val diff = Duration.between(instant, Instant.now()).seconds
         when {
             diff < 60     -> "just now"
             diff < 3600   -> "${diff / 60}m ago"
             diff < 86400  -> "${diff / 3600}h ago"
             diff < 604800 -> "${diff / 86400}d ago"
-            else -> java.time.format.DateTimeFormatter.ofPattern("MMM d")
-                .withZone(java.time.ZoneId.systemDefault())
+            else -> DateTimeFormatter.ofPattern("MMM d")
+                .withZone(ZoneId.systemDefault())
                 .format(instant)
         }
     } catch (_: Exception) { iso.take(10) }

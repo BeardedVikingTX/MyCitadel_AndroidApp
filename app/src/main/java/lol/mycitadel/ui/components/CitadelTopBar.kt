@@ -41,6 +41,7 @@ fun CitadelTopBar(
     onRegisterClick: () -> Unit,
     onDashboardClick: () -> Unit,
     onLogoutComplete: () -> Unit,
+    onPremiumClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     TopAppBar(
@@ -62,6 +63,14 @@ fun CitadelTopBar(
             }
         },
         actions = {
+            TextButton(onClick = onPremiumClick) {
+                Text(
+                    text = if (currentUser?.premium == true) "CITADEL+" else "UPGRADE",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Gold,
+                    letterSpacing = 1.sp,
+                )
+            }
             if (currentUser == null) {
                 // ── Guest state ────────────────────────────────────
                 TextButton(onClick = onLoginClick) {

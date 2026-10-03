@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="citadel_void">#080E18</color>
+    <color name="citadel_cyan">#00F0FF</color>
+    <color name="citadel_cyan_bright">#38BDF8</color>
+    <color name="citadel_gold">#FFD700</color>
+    <color name="citadel_gold_bright">#F59E0B</color>
+    <color name="citadel_blood">#EF4444</color>
+    <color name="citadel_purple">#8B5CF6</color>
+    <color name="citadel_surface">#0F172A</color>
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>

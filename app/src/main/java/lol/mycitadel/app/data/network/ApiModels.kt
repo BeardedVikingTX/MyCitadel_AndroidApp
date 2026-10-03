@@ -66,6 +66,12 @@ data class MeResponse(
 data class EmptyRequest(val placeholder: String? = null)
 
 @Serializable
+data class RegisterDeviceTokenRequest(
+    val token: String,
+    val platform: String = "android"
+)
+
+@Serializable
 data class BasicResponse(
     val status: String,
     val message: String? = null,
@@ -236,4 +242,41 @@ data class Login2faResponse(
     @SerialName("csrf_token") val csrfToken: String? = null,
     @SerialName("via_recovery_code") val viaRecoveryCode: Boolean = false,
     @SerialName("recovery_codes_remaining") val recoveryCodesRemaining: Int? = null
+)
+
+/* ── Password Reset ─────────────────────────────────────────── */
+
+@Serializable
+data class PasswordResetRequest(
+    val email: String,
+)
+
+@Serializable
+data class PasswordResetResponse(
+    val status: String,
+    val message: String? = null,
+    @SerialName("expires_in") val expiresIn: Int? = null,
+    @SerialName("request_id") val requestId: String? = null,
+    @SerialName("csrf_token") val csrfToken: String? = null,
+)
+
+/* ── Premium / Stripe ─────────────────────────────────────────── */
+
+@Serializable
+data class CheckoutResponse(
+    val status: String,
+    @SerialName("checkout_url") val checkoutUrl: String? = null,
+    @SerialName("session_id") val sessionId: String? = null,
+)
+
+@Serializable
+data class PortalResponse(
+    val status: String,
+    @SerialName("portal_url") val portalUrl: String? = null,
+)
+
+@Serializable
+data class PremiumStatusResponse(
+    val status: String,
+    val premium: Boolean = false,
 )
